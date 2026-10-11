@@ -732,6 +732,8 @@ export class Player {
         this.attackT = 0;
         this.hasHit = false;
         this.attackKind = power ? 'power' : 'slash';
+        // quick slashes chain into a forehand / backhand combo; a pause starts it over
+        this.swingN = power ? 1 : game.clockT - (this.lastSwingEnd ?? -9) < 0.6 ? (this.swingN || 0) + 1 : 0;
         this.fatigue -= power ? 14 : 4;
         game.audio.play(power ? 'swingHeavy' : 'swing', 0.8);
       }
@@ -739,13 +741,16 @@ export class Player {
     if (this.attackT >= 0) {
       const spd = w?.speed || 1.3;
       const dur = (this.attackKind === 'power' ? 0.95 : 0.6) / spd;
-      this.attackT += dt / dur;
+      // hit-stop: the blade bites and hangs for a few frames before following through
+      if (this.hitStop > 0) this.hitStop -= dt;
+      else this.attackT += dt / dur;
       if (!this.hasHit && this.attackT >= (this.attackKind === 'power' ? 0.5 : 0.42)) {
         this.hasHit = true;
-        const hit = meleeStrike(this, this.attackKind === 'power');
-        if (hit) this.shake(0.12);
+        const power = this.attackKind === 'power';
+        const hit = meleeStrike(this, power);
+        if (hit) { this.shake(power ? 0.24 : 0.14); this.hitStop = power ? 0.09 : 0.05; }
       }
-      if (this.attackT >= 1) { this.attackT = -1; this.cooldown = 0.08; }
+      if (this.attackT >= 1) { this.attackT = -1; this.cooldown = 0.08; this.lastSwingEnd = game.clockT; }
     }
   }
 
@@ -759,6 +764,18 @@ export class Player {
     camera.rotation.y = this.yaw + (Math.random() - 0.5) * shake;
     camera.rotation.x = this.pitch + (Math.random() - 0.5) * shake;
     camera.rotation.z = 0;
+    // the view leans into a swing: a roll along the cut, and a nod as a power attack comes down
+    if (!this.thirdPerson && this.attackT >= 0) {
+      const a = this.attackT;
+      const bump = (t0, t1) => (a <= t0 || a >= t1 ? 0 : Math.sin(Math.PI * (a - t0) / (t1 - t0)));
+      if (this.attackKind === 'power') {
+        camera.rotation.x += 0.02 * bump(0.1, 0.45) - 0.045 * bump(0.44, 0.9);
+      } else {
+        const s = (this.swingN || 0) % 2 ? -1 : 1;
+        camera.rotation.z = s * 0.025 * bump(0.28, 0.8);
+        camera.rotation.y -= s * 0.012 * bump(0.34, 0.72);
+      }
+    }
     if (!this.thirdPerson) {
       camera.position.set(this.pos.x, this.camY + bob, this.pos.z);
     } else {

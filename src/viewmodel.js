@@ -28,6 +28,78 @@ const GESTURES = {
   self: [[0, -0.2, -0.28, -0.45, 0.3, F(0, 1, -0.4), F(1, 0, 0)], [0.3, -0.05, -0.28, -0.33, 0.8, F(0.2, 1, 0.3), F(1, 0, 0.3)], [0.5, -0.06, -0.26, -0.34, 1, F(0.2, 1, 0.4), F(1, 0, 0.3)], [1, -0.16, -0.22, -0.5, 1, F(0, 1, -0.3), F(1, 0, 0)]],
   flick: [[0, -0.2, -0.22, -0.44, 0.1, F(0, 0.5, -1), F(1, 0, 0)], [0.32, -0.24, -0.2, -0.4, 0, F(0, 0.8, -0.2), F(1, 0, 0)], [0.42, -0.08, -0.12, -0.64, 1, F(0.1, 0.4, -1), F(1, 0, 0.2)], [1, -0.1, -0.14, -0.6, 1, F(0.1, 0.5, -1), F(1, 0, 0.2)]],
 };
+// Melee swings for the first-person arms, in camera space: where the grip is and which way the blade points.
+// Every key stays within the arm's reach (the shoulder sits ~0.2 m behind the eye, the arm is ~0.49 m long),
+// so the IK never clamps and the hand really travels the arc. Keys: [t, grip, blade, ease into the next key].
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const D = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
+const READY = { pos: V(0.23, -0.19, -0.23), blade: D(-0.22, 0.92, -0.3) };
+const BLOCK = { pos: V(0.1, -0.08, -0.25), blade: D(-1, 0.12, -0.25) };
+const SWINGS = {
+  // forehand: cock the blade up past the right shoulder, then cut down and across to the lower left
+  fore: { trail: [0.33, 0.6], keys: [
+    [0, READY.pos, READY.blade, 'io'],
+    [0.24, V(0.25, -0.06, -0.2), D(0.3, 0.9, 0.3), 'io'],
+    [0.33, V(0.27, -0.04, -0.19), D(0.45, 0.8, 0.4), 'in'],
+    [0.42, V(0.1, -0.14, -0.25), D(-0.85, 0.35, -0.4), 'out'],
+    [0.52, V(-0.04, -0.22, -0.2), D(-0.6, -0.55, -0.55), 'out'],
+    [0.64, V(-0.04, -0.27, -0.17), D(-0.4, -0.8, -0.4), 'io'],
+    [1, READY.pos, READY.blade, 'io'],
+  ] },
+  // backhand: draw the blade back low across the body, then sweep out flat to the right
+  back: { trail: [0.33, 0.6], keys: [
+    [0, READY.pos, READY.blade, 'io'],
+    [0.24, V(0.0, -0.17, -0.2), D(-0.75, 0.45, 0.45), 'io'],
+    [0.33, V(-0.03, -0.16, -0.18), D(-0.8, 0.35, 0.5), 'in'],
+    [0.42, V(0.12, -0.12, -0.25), D(-0.15, 0.35, -0.92), 'out'],
+    [0.52, V(0.29, -0.14, -0.18), D(0.85, -0.05, -0.5), 'out'],
+    [0.64, V(0.32, -0.21, -0.12), D(0.7, -0.45, -0.1), 'io'],
+    [1, READY.pos, READY.blade, 'io'],
+  ] },
+  // power attack: heave the weapon up over your head, hang there a beat, and chop straight down the middle
+  power: { trail: [0.4, 0.66], keys: [
+    [0, READY.pos, READY.blade, 'io'],
+    [0.28, V(0.21, 0.06, -0.14), D(0.1, 0.75, 0.65), 'io'],
+    [0.4, V(0.21, 0.08, -0.13), D(0.1, 0.6, 0.8), 'in'],
+    [0.5, V(0.08, -0.1, -0.24), D(-0.05, 0.3, -0.95), 'out'],
+    [0.6, V(0.06, -0.22, -0.21), D(-0.1, -0.75, -0.65), 'out'],
+    [0.76, V(0.06, -0.27, -0.17), D(-0.15, -0.82, -0.5), 'io'],
+    [1, READY.pos, READY.blade, 'io'],
+  ] },
+};
+const EASE = {
+  io: (f) => f * f * (3 - 2 * f),
+  in: (f) => f * f * f,
+  out: (f) => 1 - (1 - f) ** 2.2,
+};
+const catmull = (a, b, c, d, f, out) => {
+  const f2 = f * f, f3 = f2 * f;
+  return out.set(0, 0, 0)
+    .addScaledVector(a, -0.5 * f3 + f2 - 0.5 * f)
+    .addScaledVector(b, 1.5 * f3 - 2.5 * f2 + 1)
+    .addScaledVector(c, -1.5 * f3 + 2 * f2 + 0.5 * f)
+    .addScaledVector(d, 0.5 * f3 - 0.5 * f2);
+};
+/** Spherical interpolation between two unit vectors. */
+function slerpDir(a, b, f, out) {
+  const th = Math.acos(Math.min(1, Math.max(-1, a.dot(b))));
+  if (th < 1e-3) return out.copy(a).lerp(b, f).normalize();
+  const s = Math.sin(th);
+  return out.copy(a).multiplyScalar(Math.sin((1 - f) * th) / s).addScaledVector(b, Math.sin(f * th) / s).normalize();
+}
+/** Grip position and blade direction of a swing at time t (0..1): a smooth arc through the keys. */
+function sampleSwing(S, t, pos, blade) {
+  const K = S.keys;
+  let i = 0;
+  while (i < K.length - 2 && K[i + 1][0] <= t) i++;
+  const a = K[i], b = K[i + 1];
+  const f = EASE[a[3]](Math.min(1, Math.max(0, (t - a[0]) / (b[0] - a[0]))));
+  catmull(K[Math.max(0, i - 1)][1], a[1], b[1], K[Math.min(K.length - 1, i + 2)][1], f, pos);
+  slerpDir(a[2], b[2], f, blade);
+}
+const TRAIL_N = 18;
+const _sp = new THREE.Vector3(), _sb = new THREE.Vector3(), _tp = new THREE.Vector3();
+
 const _gv = new THREE.Vector3();
 /** Sample a gesture at time t: { pos, open, fingers, fist, w (blend weight) }. */
 function gesture(anim, t) {
@@ -91,6 +163,24 @@ export class ViewModel {
     this.bladeShown = false;
     this.torchHeld = false;
     this.torchScale = 0.78; // a touch under life size: it sits much nearer the eye than an outstretched arm would
+    // the swing trail: a ribbon swept by the blade through the fast part of each stroke
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array((TRAIL_N + 1) * 2 * 3), 3));
+    tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array((TRAIL_N + 1) * 2 * 3), 3));
+    const idx = [];
+    for (let i = 0; i < TRAIL_N; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    tg.setIndex(idx);
+    this.trail = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    this.trail.frustumCulled = false;
+    this.trail.visible = false;
+    this.scene.add(this.trail);
+    this.trailCol = new THREE.Color();
+    // the weapon lags a little behind the view when you look around
+    this.sway = new THREE.Vector2();
+    this.swingPos = READY.pos.clone();
+    this.swingBlade = READY.blade.clone();
+    this.blockK = 0;
+    this.bladeLen = 0.9;
     this.rebuild();
   }
 
@@ -204,9 +294,13 @@ export class ViewModel {
         this.arrowMesh = buildArrowMesh();
         this.root.add(this.arrowMesh);
       } else {
+        const box = new THREE.Box3().setFromObject(m);
+        this.bladeLen = Math.max(0.3, box.max.y);
         kit.side.r.grip.add(m);
         this.weaponMesh = m;
         attachBladeFx(m, w.look);
+        const fx = w.look.fx;
+        this.trailCol.setHex(fx === 'fire' ? 0xff9a50 : fx === 'shock' ? 0x9ac0ff : fx ? bladeLightColor(fx) : 0xdfe6ee);
       }
     }
     this.torchMesh = null;
@@ -250,8 +344,15 @@ export class ViewModel {
     this.drawOffset = lerp(this.drawOffset, ready ? 0 : 1, Math.min(1, dt * 8));
     const t = game.clockT;
     const bobAmt = Math.min(1, (p.speedNow || 0) / 5);
-    const bx = Math.sin(p.bob || 0) * 0.012 * bobAmt;
-    const by = -Math.abs(Math.cos(p.bob || 0)) * 0.012 * bobAmt + Math.sin(t * 1.6) * 0.003;
+    // look-sway: the arms trail the view a touch, then spring back
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    const dYaw = this._yaw === undefined ? 0 : wrap(p.yaw - this._yaw), dPitch = this._pitch === undefined ? 0 : p.pitch - this._pitch;
+    this._yaw = p.yaw; this._pitch = p.pitch;
+    const k = Math.min(1, dt * 9), inv = dt > 0 ? 1 / dt : 0;
+    this.sway.x += (THREE.MathUtils.clamp(dYaw * inv * 0.008, -0.045, 0.045) - this.sway.x) * k;
+    this.sway.y += (THREE.MathUtils.clamp(-dPitch * inv * 0.008, -0.035, 0.035) - this.sway.y) * k;
+    const bx = Math.sin(p.bob || 0) * 0.012 * bobAmt + this.sway.x;
+    const by = -Math.abs(Math.cos(p.bob || 0)) * 0.012 * bobAmt + Math.sin(t * 1.6) * 0.003 + this.sway.y;
 
     const R = this.right, L = this.left;
     const low = this.drawOffset;
@@ -321,11 +422,13 @@ export class ViewModel {
       lx = -0.35 + bx + Math.sin(t * 0.9) * 0.006; ly = -0.32 + by + Math.sin(t * 1.3) * 0.005 - (p.blocking ? 0.06 : 0); lz = -0.56;
       lrx = 0; lry = 0; lrz = 0;
     }
-    if (this.kit) this.poseKit(dt, p, { rx, ry, rz, rrx, rry, rrz, lx, ly, lz, lrx, lry, lrz, bow: bow && !torch, rbow: bow, torch, by });
+    const swing = this.kit && this.weaponMesh ? this.swingPose(dt, p, bx, by, low, t) : null;
+    if (this.kit) this.poseKit(dt, p, { rx, ry, rz, rrx, rry, rrz, lx, ly, lz, lrx, lry, lrz, bow: bow && !torch, rbow: bow, torch, by, swing });
     else {
       L.position.set(lx, ly, lz);
       L.rotation.set(lrx, lry, lrz);
     }
+    this.updateTrail(p, swing);
 
     // the torch: where its flame sits in the world, and its warm light on the arm
     if (this.torchMesh) {
@@ -431,6 +534,59 @@ export class ViewModel {
     }
   }
 
+  /** Where the sword hand is and where the blade points: ready, swinging, charging a power attack, or blocking. */
+  swingPose(dt, p, bx, by, low, t) {
+    const pos = this.swingPos, blade = this.swingBlade;
+    let name = null;
+    this.blockK += ((p.blocking && !this.shieldMesh ? 1 : 0) - this.blockK) * Math.min(1, dt * 14);
+    if (p.attackT >= 0) {
+      name = p.attackKind === 'power' ? 'power' : (p.swingN || 0) % 2 ? 'back' : 'fore';
+      sampleSwing(SWINGS[name], Math.min(1, p.attackT), pos, blade);
+    } else {
+      // ready, breathing; holding the button heaves the weapon back toward the overhead windup
+      _sp.copy(READY.pos);
+      _sb.copy(READY.blade);
+      _sb.x += Math.sin(t * 0.8) * 0.025; _sb.normalize();
+      if (p.attackHold > 0.1) sampleSwing(SWINGS.power, EASE.io(Math.min(1, (p.attackHold - 0.1) / 0.25)) * 0.3, _sp, _sb);
+      if (this.blockK > 0.001) { _sp.lerp(BLOCK.pos, this.blockK); slerpDir(_sb, BLOCK.blade, this.blockK, _sb); }
+      const k = Math.min(1, dt * 16);
+      pos.lerp(_sp, k);
+      slerpDir(blade, _sb, k, blade);
+    }
+    const out = this._swingOut || (this._swingOut = { pos: new THREE.Vector3(), blade: new THREE.Vector3(), name: null, off: new THREE.Vector3() });
+    out.off.set(bx, by - low * 0.42, low * 0.06);
+    out.pos.copy(pos).add(out.off);
+    out.blade.copy(blade);
+    out.name = name;
+    return out;
+  }
+
+  /** A ribbon swept by the blade over the last stretch of the swing, bright through the fast part of the stroke. */
+  updateTrail(p, swing) {
+    const T = this.trail;
+    T.visible = !!swing?.name && this.root.visible && this.weaponMesh?.visible;
+    if (!T.visible) return;
+    const S = SWINGS[swing.name], [w0, w1] = S.trail;
+    const now = Math.min(1, p.attackT), span = 0.14;
+    const pa = T.geometry.attributes.position, ca = T.geometry.attributes.color;
+    const L = this.bladeLen, c = this.trailCol;
+    let peak = 0;
+    for (let i = 0; i <= TRAIL_N; i++) {
+      const ts = Math.max(0, now - span * (1 - i / TRAIL_N));
+      sampleSwing(S, ts, _tp, _sb);
+      _tp.add(swing.off);
+      const win = THREE.MathUtils.smoothstep(ts, w0, w0 + 0.03) * (1 - THREE.MathUtils.smoothstep(ts, w1 - 0.08, w1));
+      const a = (i / TRAIL_N) ** 1.6 * win * 0.38;
+      peak = Math.max(peak, a);
+      pa.setXYZ(i * 2, _tp.x + _sb.x * L * 0.5, _tp.y + _sb.y * L * 0.5, _tp.z + _sb.z * L * 0.5);
+      pa.setXYZ(i * 2 + 1, _tp.x + _sb.x * L, _tp.y + _sb.y * L, _tp.z + _sb.z * L);
+      ca.setXYZ(i * 2, c.r * a * 0.15, c.g * a * 0.15, c.b * a * 0.15);
+      ca.setXYZ(i * 2 + 1, c.r * a, c.g * a, c.b * a);
+    }
+    pa.needsUpdate = true; ca.needsUpdate = true;
+    T.visible = peak > 0.01;
+  }
+
   /** Pose the kit arms from the same targets the simple arms use. */
   poseKit(dt, p, P) {
     const K = this.kit;
@@ -442,6 +598,13 @@ export class ViewModel {
     let rPose = this.weaponMesh ? 'grip' : 'fist';
     if (!this.weaponMesh && !P.rbow) { fist = new THREE.Vector3(-0.35, 1, 0.1).applyQuaternion(bladeQ); }
     if (P.rbow) { fist.set(0, 1, 0); fingers.set(0.1, 0, -1); rPose = 'grip'; }
+    if (P.swing) {
+      // the blade goes exactly where the swing says; the wrist turns the fingers to wrap round it
+      rT.copy(P.swing.pos);
+      fist = P.swing.blade.clone();
+      fingers = rT.clone().sub(K.shoulder.r).normalize();
+      fingers.addScaledVector(fist, -fingers.dot(fist)).normalize();
+    }
     K.poseArm('r', rT, fingers, fist, new THREE.Vector3(0.8, -1, 0.5));
     // the left hand: shield, bow, a spell, or held low
     const lT = new THREE.Vector3(P.lx, P.ly, P.lz);
