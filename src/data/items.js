@@ -142,6 +142,10 @@ I('ladys_mantle', "Lady's Mantle Leaves", [{ type: 'health', amount: 6 }], 2);
 I('ladys_smock', "Lady's Smock Leaves", [{ type: 'magicka', amount: 6 }], 2);
 I('nirnroot', 'Nirnroot', [{ type: 'health', amount: 12 }, { type: 'magicka', amount: 12 }], 10);
 
+// flowers trade at a flat price, whatever your Mercantile
+export const FLOWER_PRICE = 20;
+export const FLOWERS = ['starflower', 'st_jahns_wort', 'ladys_mantle', 'ladys_smock', 'blue_flower'];
+
 // ---- Misc ----
 add({ id: 'gold', name: 'Gold', type: 'gold', weight: 0, value: 1 });
 add({ id: 'lockpick', name: 'Lockpick', type: 'misc', weight: 0, value: 4 });

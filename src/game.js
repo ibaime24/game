@@ -40,6 +40,8 @@ import { updateBladeFx, bladeLightColor } from './fx/bladefx.js';
 import { updateArmorFx } from './actors/armorSets.js';
 import { updateLegendary } from './world/legendary.js';
 
+/** Gold paid for finishing any quest, on top of its own reward. */
+const QUEST_GOLD = 100;
 const _emitPos = new THREE.Vector3();
 const _torchTip = new THREE.Vector3();
 const _snowFog = new THREE.Color();
@@ -2279,6 +2281,11 @@ export const game = {
     const done = def.stages[st]?.done;
     this.ui.notify(done ? `Quest completed: ${def.name}` : `Journal updated: ${def.name}`, 'quest');
     this.audio.play('quest', 0.7);
+    // every quest won pays a purse of gold, once, on top of whatever the quest itself gives
+    if (done && !this.flags.questGold?.[q]) {
+      (this.flags.questGold ||= {})[q] = true;
+      this.giveItem('gold', QUEST_GOLD);
+    }
     this.corwynOnStage(q, st);
     this.whOnStage(q, st);
   },

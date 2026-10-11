@@ -1,7 +1,7 @@
 // All DOM UI: HUD, compass, menus, dialogue, barter, containers, lockpicking, persuasion, screens.
 import * as THREE from 'three';
-import { ITEMS } from '../data/items.js';
-import { SPELLS, SPELL_PRICES, WIZARD_SHOP } from '../data/spells.js';
+import { ITEMS, FLOWERS, FLOWER_PRICE } from '../data/items.js';
+import { SPELLS, SPELL_PRICES, SPELL_PRICE, WIZARD_SHOP } from '../data/spells.js';
 import {
   RACES, CLASSES, BIRTHSIGNS, SKILLS, ATTRIBUTES, ATTR_LABEL, canLevelUp, attributeBonus, applyLevelUp,
   spellCost, priceMultiplier, skillXpNeeded,
@@ -1037,7 +1037,7 @@ export class UI {
       const mkList = (inv, buying) => h('div', { class: 'list', style: 'flex:1' },
         h('div', { class: 'head' }, h('span', { text: buying ? `${actor.name}'s wares` : 'Your items' }), h('span', { class: 'r', text: 'Price' })),
         ...inv.entries().filter((e) => e.item.type !== 'gold' && (buying || !e.item.quest)).sort((a, b) => a.item.type.localeCompare(b.item.type) || a.item.value - b.item.value).map(({ id, count, item }) => {
-          const price = Math.max(1, Math.round(item.value * (buying ? buyMul : sellMul)));
+          const price = FLOWERS.includes(id) ? FLOWER_PRICE : Math.max(1, Math.round(item.value * (buying ? buyMul : sellMul)));
           const afford = buying ? p.inventory.gold >= price : actor.shopGold >= price;
           return h('div', { class: 'item' + (afford ? '' : ' stolen') + (!buying && p.isEquipped(id) ? ' eq' : ''), onclick: () => {
             if (!afford) return this.notify(buying ? 'You cannot afford that.' : `${actor.name} cannot afford that.`);
@@ -1068,10 +1068,9 @@ export class UI {
     const panel = h('div', { class: 'parch', style: 'width:min(620px,92vw);height:min(520px,80vh);display:flex;flex-direction:column' });
     const render = () => {
       panel.innerHTML = '';
-      const mul = priceMultiplier(p.ch.skills.mercantile, actor.disposition, true);
       const ids = actor.merchant === 'wizard' ? WIZARD_SHOP : Object.keys(SPELL_PRICES);
       const list = h('div', { class: 'list', style: 'flex:1' }, ...ids.filter((id) => !p.spells.includes(id)).map((id) => {
-        const sp = SPELLS[id], price = Math.round((SPELL_PRICES[id] ?? sp.price) * mul);
+        const sp = SPELLS[id], price = SPELL_PRICE;
         return h('div', { class: 'item', onclick: () => {
           if (p.inventory.gold < price) return this.notify('You cannot afford that spell.');
           p.removeItem('gold', price); p.spells.push(id); g.audio.play('skillUp'); this.notify(`You learned ${sp.name}.`); render();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Inventory, ITEMS, LOOT, rollLoot, parseSpec } from '../src/data/items.js';
+import { Inventory, ITEMS, LOOT, rollLoot, parseSpec, FLOWERS } from '../src/data/items.js';
 import { SPELLS, SPELL_SHOP, SPELL_PRICES } from '../src/data/spells.js';
 import { TEMPLATES, LEVELED, PEOPLE, NPCS, pickLeveled } from '../src/data/actors.js';
 import { DIALOGUE, MERCHANTS } from '../src/data/dialogue.js';
@@ -128,6 +128,7 @@ describe('data integrity', () => {
   it('merchant stock and spells are valid', () => {
     for (const m of Object.values(MERCHANTS)) for (const spec of m.stock) expect(ITEMS[parseSpec(spec)[0]], spec).toBeDefined();
     for (const id of [...SPELL_SHOP, ...Object.keys(SPELL_PRICES)]) expect(SPELLS[id], id).toBeDefined();
+    for (const id of FLOWERS) expect(ITEMS[id]?.type, id).toBe('ingredient');
     for (const sp of Object.values(SPELLS)) expect(SKILLS[sp.school], sp.id).toBeDefined();
     for (const c of Object.values(CLASSES)) for (const s of c.spells || []) expect(SPELLS[s]).toBeDefined();
     for (const b of Object.values(BIRTHSIGNS)) { if (b.power) expect(SPELLS[b.power]).toBeDefined(); for (const s of b.spells || []) expect(SPELLS[s]).toBeDefined(); }

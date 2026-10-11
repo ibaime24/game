@@ -103,6 +103,8 @@ Every quest — stages, NPCs, locations, choices, rewards and flags — is docum
 
 **Magic** — every elemental spell has its own look, in the storybook-night style of the sky: bolts carry a hot core inside a turning four-point star glint, fire trails a comet's tail of flame and chunky pixel embers and bursts into a crown of real flames; frost tumbles out snowflakes and shatters into ice shards under a spinning flake; lightning crackles with forking arcs and spits pixel sparks and star flickers that keep twinkling where it struck. The casting hand gathers the element (a flame, a snowflake or a ball of arcs) before it flies. Mages, Battlemages and Spellswords can conjure a **Bound Flame Blade** (sets foes burning) or a **Bound Storm Blade** (lightning leaps to a second foe), animated blades that light up the world around you; both are also sold among Aldous Quillwhistle's Wonders.
 
+**Money** — you start with 25 gold and earn more from loot, chests, selling to merchants, and quests: every quest you finish pays 100 gold on top of its own reward. Wildflowers (Starflower, St. Jahn's Wort, Lady's Mantle, Lady's Smock, Columbine Root) trade for a flat 20 gold each, and every spell in every shop (Teekeeus in Chorrol, and Aldous's Wonders) costs a flat 40 gold.
+
 **Systems** — topic-based dialogue with disposition, a persuasion mini-game and bribes; barter and a spell merchant; lockpicking mini-game; containers and theft; crime, bounty and guards ("Stop right there, criminal scum!") with fines, jail or resisting arrest; renting rooms; wait/sleep; compass with quest markers; parchment map with fast travel; journal; save/load (localStorage); generative music that shifts for combat, night, dungeons and Oblivion.
 
 ## Code layout

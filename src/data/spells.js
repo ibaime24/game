@@ -65,6 +65,8 @@ export const WIZARD_SHOP = WONDERS.map((w) => w.id);
 
 export const SPELL_SHOP = ['frostbite', 'shock_bolt', 'fireball', 'heal_major', 'open_easy_lock', 'summon_scamp', 'starlight', 'detect_life', 'protect', 'summon_skeleton'];
 
+// every spell in every shop costs the same flat price
+export const SPELL_PRICE = 40;
 export const SPELL_PRICES = {
   frostbite: 40, shock_bolt: 90, fireball: 260, heal_major: 200, open_easy_lock: 60,
   summon_scamp: 180, starlight: 20, detect_life: 70, protect: 50, summon_skeleton: 90,

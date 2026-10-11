@@ -45,6 +45,8 @@ Coordinates are overworld metres: north is âˆ’Z and east is +X. Chorrol is at (â
 
 The QuestLog only moves forward: `set(q, stage)` ignores any stage at or below the current one. A stage marked `done` completes the quest.
 
+**Quest gold:** finishing any quest (reaching any `done` stage) pays **100 gold** (`QUEST_GOLD` in `game.js`), on top of the rewards listed below. It is paid once per quest, even for quests with several ending stages (`flags.questGold[q]`, saved).
+
 ---
 
 ## Main quest
