@@ -87,6 +87,10 @@ Every quest — stages, NPCs, locations, choices, rewards and flags — is docum
 
 **Side quest: *A Crown of Starflowers*** — on the far side of Lake Rumare, east of the Imperial City, an old tinker named Hob wanders a meadow with his painted wagon, his dog Honey and her three puppies. One pup has chosen you. Pick ten glowing starflowers from the meadow so Hob can weave the crown his family's custom demands, then name your new dog (Biscuit, Bramble, Pip or Sir Woofington). Your dog follows you everywhere, fights beside you, grows up over a few days, and can be petted (and told to stay or come along) with E.
 
+**The Greenheart and Falinor** — deep in the western woods below the mountains stands the **Hollow Elder**, an oak so vast it seems to belong to another country, split at the foot and glowing green-gold inside. Step through and you are in a pocket of Valenwood: graht-oaks a hundred metres tall with buttress roots like walls and moss hanging from their limbs, a roof of leaves so dense the day falls only in shafts, glowing mushrooms among the roots, fireflies and motes in the green air, ferns, fallen giants and a lily pond. At its heart is **Falinor**, a little wood-elf town built around the Great Tree: a ring platform reached by a spiral stair, leaf-roofed pod-houses, paper lanterns, a shrine to Y'ffre, a bowyer's stall and an archery range. Deer and chipmunks roam everywhere.
+
+**Side quest: *The Chipmunk Moot*** — Eranwe Greenfletch, Falinor's bow-master, challenges you to the rite every Bosmer child sits: tag ten chipmunks with blunted arrows in the Tumbling Grove before her two-minute song ends (they are only offended, never harmed). Win, and she teaches you **Summon Spirit Hart**: a deer of green light that follows you into battle and keeps mending your wounds.
+
 **Legendary arms** — five unique swords rest point-down in rune-ringed stone pedestals under columns of coloured light, and three unique armour sets stand on display deep in the dungeons. Every piece is sculpted onto the skeleton and has its own living effects.
 - **Sunfall** (on the rise behind the Wayshrine of Akatosh): a broad golden blade with a white-hot core and a sunburst guard; fire damage, doubled against the undead.
 - **Starfang** (in the starflower meadow east of the lake): a midnight sabre with a glowing moon-edge and five twinkling stars caught in its curve; now and then a star falls on what it strikes.
@@ -113,7 +117,7 @@ src/
   actors/            character kit (rigged CC0 models + clip state machine), procedural fallbacks, AI
   data/              rules (stats), items, spells, actors, dialogue, quests
   world/             terrain, sky, weather, water, vegetation, props & scatter, architecture, interiors,
-                     quest sites, the Deadlands
+                     quest sites, the Deadlands, the Greenheart
   ui/ui.js           HUD, compass, menus, dialogue, barter, lockpicking, screens
 tests/               Vitest unit tests for rules, collision, data integrity and world layout
 ```

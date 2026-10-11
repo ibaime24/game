@@ -29,6 +29,15 @@ describe('Inventory', () => {
 });
 
 describe('data integrity', () => {
+  it('the Greenheart and the Chipmunk Moot are complete', () => {
+    expect(QUESTS.sq_moot.stages[100].done).toBe(true);
+    expect(SPELLS.spirit_deer).toMatchObject({ kind: 'summon', creature: 'spirit_deer' });
+    expect(TEMPLATES.spirit_deer.ai).toBe('support');
+    expect(TEMPLATES.chipmunk.taggable).toBe(true);
+    for (const id of ['eranwe', 'velandil', 'mirieth']) expect(NPCS.find((n) => n.id === id)?.cell, id).toBe('greenheart');
+    for (const d of ['eranwe', 'velandil', 'mirieth', 'falinor_folk']) expect(DIALOGUE[d], d).toBeTruthy();
+    expect(ITEMS.blunt_arrow.type).toBe('arrow');
+  });
   it('the legendary swords and armour sets are complete', () => {
     const swords = Object.values(ITEMS).filter((i) => i.legendary);
     expect(swords.map((s) => s.id).sort()).toEqual(['starfang', 'sunfall', 'verdant_thorn', 'voidreaver', 'winters_edge']);

@@ -94,6 +94,10 @@ SET('frostbloom', 'light', 0xdfe8f2, [
   ['hands', 'frostbloom_gauntlets', 'Frostbloom Bracers', 4, 3], ['legs', 'frostbloom_greaves', 'Frostbloom Greaves', 6, 6], ['feet', 'frostbloom_boots', 'Frostbloom Boots', 4, 4],
 ], { fortifyHealth: 6, fortifyMagicka: 6 }, 'Pale silver scale under a white fur mantle, with ice crystals that grow from the shoulders and a crown of ice. Kynareth\'s own frost runs through it in glowing runes.');
 
+// ---- The Chipmunk Moot
+add({ ...W('practice_bow', 'Greenheart Practice Bow', 'marksman', 5, 1, 0, 6, 25, { kind: 'bow', color: 0x7a5a32, len: 1.2 }), desc: 'A light hunting bow of springy yew, bound with green thread. The Bosmer of Falinor learn on bows like this before they can walk.' });
+add({ id: 'blunt_arrow', name: 'Blunted Practice Arrow', type: 'arrow', damage: 1, weight: 0.05, value: 0, desc: 'An arrow with a knob of soft leather where the point should be. It stings. It does not kill. Ask any chipmunk.' });
+
 // ---- Light ---- carried in the off hand, in place of a shield
 add({ id: 'torch', name: 'Torch', type: 'light', slot: 'shield', rank: 1, weight: 1, value: 2, desc: 'A stout stick wrapped in pitch-soaked rags. It lights the dark around you, and makes you easier to see. Press L to light or douse it.' });
 

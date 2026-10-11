@@ -205,6 +205,15 @@ export class Actor {
     this.slowT = 0;
     this.summonT = def.summon ? (opts.duration || 30) : 0;
     this.lastHitBy = null;
+    // spirit creatures are made of light: translucent, glowing, with a soft halo of their own colour
+    if (def.spirit) {
+      this.group.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        o.material = [].concat(o.material).map((m) => { const c = m.clone(); c.transparent = true; c.opacity = 0.62; c.depthWrite = false; if (c.emissive) { c.emissive.setHex(def.spirit); c.emissiveIntensity = 1.1; } return c; });
+        if (o.material.length === 1) o.material = o.material[0];
+        o.castShadow = false;
+      });
+    }
     this.update(0);
   }
 
@@ -330,6 +339,8 @@ export class Actor {
           const d = this.pos.distanceTo(c.pos);
           if (d < (def.shy ?? (c.isPlayer && c.sneaking ? 9 : 22))) { this.fleeFrom = c; this.fleeT = def.shy ? 1.2 + Math.random() : 4 + Math.random() * 3; break; }
         }
+      } else if (def.ai === 'support') {
+        // spirits that tend rather than fight: they only follow
       } else if (def.ai !== 'civilian') {
         const seen = this.perceive();
         if (seen && (!this.target || this.pos.distanceTo(seen.pos) < this.pos.distanceTo(this.target.pos) - 3)) this.setTarget(seen);

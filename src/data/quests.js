@@ -257,6 +257,17 @@ QUESTS.sq_bunnies = {
   },
 };
 
+// side quest: The Chipmunk Moot (in the Greenheart)
+const GROVE = { cell: 'greenheart', x: -78, z: -48 };
+QUESTS.sq_moot = {
+  name: 'The Chipmunk Moot',
+  stages: {
+    10: { text: 'Eranwe Greenfletch, master of the bow in the Bosmer town of Falinor, has challenged me to the Chipmunk Moot: tag ten chipmunks with blunted arrows in the Tumbling Grove, west of town, before her song runs out. She gave me a practice bow and a quiver of blunted arrows. When I am ready, I should tell her so in the grove.', target: { ...GROVE, npc: 'eranwe' } },
+    20: { text: 'Ten chipmunks tagged, and not one of them harmed — only deeply offended. Eranwe is waiting in the Tumbling Grove.', target: { ...GROVE, npc: 'eranwe' } },
+    100: { text: 'I won the Chipmunk Moot. Eranwe taught me to call a Spirit Hart of the Greenheart — a deer of living light that follows me in battle and mends my wounds.', done: true },
+  },
+};
+
 export class QuestLog {
   constructor() {
     this.stages = {};

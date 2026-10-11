@@ -30,6 +30,7 @@ export const LOCATIONS = {
   hobs_wagon: { name: "Hob's Wagon", x: 580, z: 240, icon: 'camp', discovered: false },
   snikkits_den: { name: "Snikkit's Den", x: 60, z: -520, icon: 'camp', discovered: false },
   frostfang_hollow: { name: 'Frostfang Hollow', x: 205, z: -552, icon: 'camp', discovered: false },
+  hollow_elder: { name: 'The Hollow Elder', x: -565, z: -95, icon: 'cave', discovered: false },
   skyward_shrine: { name: 'Skyward Shrine', x: -250, z: -603, icon: 'shrine', discovered: false },
   varns_camp: { name: "Varn's Camp", x: -330, z: -540, icon: 'camp', discovered: false },
   rime_spire: { name: 'The Rime Spire', x: -92, z: -636, icon: 'ruin', discovered: false },
@@ -107,6 +108,7 @@ export const FLATS = [
   { x: 580, z: 240, r: 8, fall: 14, h: 12.4 }, // Hob's wagon, in the starflower meadow east of the lake
   { x: 60, z: -520, r: 7, fall: 12, h: 28.5 }, // Snikkit's den
   { x: 205, z: -552, r: 15, fall: 16, h: 32 }, // Frostfang Hollow
+  { x: -565, z: -95, r: 9, fall: 12, h: 20 }, // the Hollow Elder
   // the five legendary swords' pedestals
   { x: -90, z: -95, r: 3.5, fall: 7, h: 18.4 }, // Sunfall, on the rise behind the Wayshrine of Akatosh
   { x: 602, z: 262, r: 3.5, fall: 7, h: 10.1 }, // Starfang, in the starflower meadow

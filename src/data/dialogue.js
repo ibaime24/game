@@ -1072,6 +1072,75 @@ DIALOGUE.matilde.topics.unshift({ id: 'mock_pie', label: 'Mock Rabbit Pie', show
     return '*She works like a whirlwind: the venison sizzling in butter, the snowberries popping in the pan, the potatoes mashed rich and golden, everything folded into a crust the size of a cartwheel and crimped all round with her thumbs. When it comes out of the oven, the whole stall smells exactly, uncannily, like rabbit stew.*\n\nThere. Mock Rabbit Pie. No rabbits were harmed in the making of this pie. *She hands it over with a wink.* Tell your goblin he owes me a recipe for something. Anything. Goblins must cook something.';
   } });
 
+// ---------------------------------------------------------------- The Greenheart
+const MQ = (g) => g.quests.stage('sq_moot');
+const greenTopics = [
+  { id: 'greenheart', label: 'The Greenheart', say: () => pick([
+    'When the Bosmer came north with the Alessians, a few of us would not leave the trees behind. So the trees came too. Y\'ffre told the forest a story about a little Valenwood in the snows of the north, and the forest believed it. That was three thousand years ago. It is still believing.',
+    'Outside, you have oaks you can put your arms around. Here, we have oaks you can put a town around. We have done exactly that.',
+  ]) },
+  { id: 'green_pact', label: 'The Green Pact', say: () => 'We do not harm living wood or green things — not to build, not to burn, not to carve. Everything you see here was grown, or fallen, or asked for. We eat meat, only meat, and we eat all of it. The chipmunks are safe, though. Too small. Too fast. Too annoying.' },
+];
+
+DIALOGUE.eranwe = {
+  greeting: (g) => {
+    if (g.moot) return 'Quiet! You are on the clock!';
+    if (MQ(g) === 20) return '*She lowers her bow and grins, every one of her sharp teeth showing.* Ten. TEN. You did not even hit one twice. Come here, outlander.';
+    if (g.quests.done('sq_moot')) return pick(['Has the Hart come when you called? It will. It always comes for someone who has shot straight in the Grove.', 'The chipmunks still talk about you. In a bad way.']);
+    if (MQ(g) === 10) return 'Ready? The Grove is ready. The chipmunks are always ready. That is the whole problem.';
+    return '*A wiry Bosmer with an enormous bow leans against a stump, watching a chipmunk on a branch watch her back.* An outlander in the Greenheart. And you carry yourself like you might know which end of an arrow to hold. Do you?';
+  },
+  topics: [
+    { id: 'moot', label: 'The Chipmunk Moot', show: (g) => MQ(g) === 0,
+      say: (g) => {
+        g.quests.set('sq_moot', 10, g.day());
+        if (!g.player.inventory.has('practice_bow')) g.giveItem('practice_bow', 1);
+        g.giveItem('blunt_arrow', 40);
+        return 'Every child of Falinor sits the Moot before they are allowed a real bow. Here is how it goes. The Tumbling Grove fills with chipmunks — Y\'ffre\'s little tricksters, fast as rumour and twice as rude. I play my song. Before the song ends, you must tag ten of them with blunted arrows. Blunted, mind. The Green Pact does not cover chipmunks, but I do.\n\nTake this practice bow, and these — the knobbed arrows. Tag ten, and I will teach you something no outlander has learned in a hundred years: how to call a Spirit Hart of the Greenheart, who walks beside the worthy and closes their wounds.\n\nTell me when you are ready. And do not chase them. You will never catch a chipmunk by chasing it. Be still. Be patient. Be quicker than they think you are.';
+      } },
+    { id: 'begin', label: '"I\'m ready. Start the Moot."', show: (g) => MQ(g) === 10 && !g.moot && g.cell.id === 'greenheart',
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.startMoot(npc);
+        return '*She lifts a little bone flute to her lips and winks.* Arrow on the string, outlander. The song is short. The chipmunks are not slow. Begin!';
+      } },
+    { id: 'rules', label: 'The rules', show: (g) => MQ(g) === 10,
+      say: () => 'Ten tags before my song ends — two minutes, near enough. Only arrows count; I want to see your aim, not your boots. Any arrow will do but use the blunted ones, or the Treethane will have words with both of us. If you miss the song, no shame: we try again. Most children need six tries. One needed forty. He is now our best archer. Do not tell him I said so.' },
+    { id: 'reward', label: 'The Spirit Hart', show: (g) => MQ(g) === 20,
+      say: (g) => {
+        g.quests.set('sq_moot', 100, g.day());
+        if (!g.player.spells.includes('spirit_deer')) g.player.spells.push('spirit_deer');
+        g.giveItem('gold', 75);
+        g.ui.notify('You learned Summon Spirit Hart.');
+        g.audio.play('chime', 1);
+        return '*She takes your hand, turns it palm-up, and draws on it with one fingertip — a circle, an antler, a spiral — and the lines glow green where she drew them.*\n\nThe Hart is the Greenheart\'s own spirit. It does not fight; it does not need to. It walks beside you, and while you bleed, it mends you. Call it when the fight is bad, and it will come. Call it when the fight is good, and it will come anyway, and look at you reproachfully.\n\nYou shot well. The chipmunks will be complaining about you for a generation. That is the highest honour Falinor has.';
+      } },
+    { id: 'eranwe_self', label: 'Your bow', say: () => 'Grown, not made: a bough the Great Tree let fall the year I was born. I have missed with it once, in 3E 391. There is a plaque. I hate the plaque.' },
+    ...greenTopics, ...generic,
+  ],
+};
+
+DIALOGUE.velandil = {
+  greeting: () => pick(['*An ancient Bosmer woman in a robe of living moss looks down at you from the ring of the Great Tree.* Welcome, outlander. Few come through the Elder. Fewer leave wanting to.', 'The Tree says you smell of snow. Have you been north? Of course you have. Everything here is north, from where we started.']),
+  topics: [
+    { id: 'falinor', label: 'Falinor', say: () => 'Falinor is the town of the Great Tree, and the Great Tree is Falinor. Forty of us, and two hundred chipmunks, and one very old tree who has heard every argument we have ever had. I am the Treethane, which means I listen to the arguments first.' },
+    { id: 'elder', label: 'The Hollow Elder', say: () => 'The door you came through. Y\'ffre left it open so that we would never forget the world outside, and so that the world outside would never quite forget us. Most who find it think they dreamed us afterwards. I hope you will not.' },
+    ...greenTopics, ...generic,
+  ],
+};
+
+DIALOGUE.mirieth = {
+  greeting: () => pick(['Arrows! Bows! Meat, smoked, salted, or still arguing! What do you need, outlander?', 'You look like someone who has been tagging chipmunks. Buy more arrows. You will need more arrows.']),
+  topics: [
+    { id: 'wares', label: 'Your wares', say: () => 'Arrows from our own fletchers — goose and owl feather, never cut from a living thing. Bows grown from fallen boughs. Potions the Treethane brews. And meat. We are Bosmer. There is always meat.' },
+    ...greenTopics, ...generic,
+  ],
+};
+
+DIALOGUE.falinor_folk = {
+  greeting: () => pick(['Y\'ffre\'s light on you, outlander.', 'Mind the roots. They move when you are not looking. Probably.', 'Have you sat the Chipmunk Moot yet? I sat it eleven times. Eleven.', 'Do not climb the Great Tree without asking. Ask the tree, I mean.']),
+  topics: [...greenTopics, ...generic],
+};
+
 export const MERCHANTS = {
   general: {
     gold: 800,
@@ -1082,6 +1151,7 @@ export const MERCHANTS = {
   },
   inn: { gold: 300, stock: ['bread*6', 'cheese*6', 'apple*8', 'sweetroll*4', 'mead*6', 'wine_tamika*3', 'wine_surilie*2', 'cyrodilic_brandy*2', 'potion_fatigue*3', 'potion_health_light*2'] },
   snowhare: { gold: 300, stock: ['mulled_wine*8', 'mead*4', 'bread*4', 'cheese*4', 'sweetroll*4', 'venison*3', 'potato*4', 'potion_fatigue*2', 'torch*3'] },
+  bosmer: { gold: 400, stock: ['blunt_arrow*40', 'iron_arrow*40', 'steel_arrow*30', 'practice_bow', 'elven_bow', 'potion_health*3', 'potion_magicka*2', 'venison*6', 'mead*3'] },
   bakery: { gold: 120, stock: ['sweetroll*12', 'bread*8', 'apple*6', 'pear*4', 'cheese*3'] },
   food: { gold: 150, stock: ['bread*5', 'cheese*4', 'apple*6', 'onion*4', 'potato*4', 'pear*3', 'venison*3', 'mead*3', 'cyrodilic_brandy*1', 'red_mushroom*3'] },
   spells: { gold: 400, stock: ['potion_magicka*4', 'blue_flower*4', 'ring_of_the_wizard'], spells: true },

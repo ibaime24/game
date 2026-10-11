@@ -18,6 +18,7 @@ export const SPELLS = {
   blood_of_north: { id: 'blood_of_north', name: 'Blood of the North', school: 'restoration', min: 0, cost: 0, kind: 'self', heal: 90, color: 0xff6060, power: true, desc: 'Restore Health 90 pts. Once a day.' },
   maras_gift: { id: 'maras_gift', name: "Mara's Gift", school: 'restoration', min: 0, cost: 0, kind: 'self', heal: 200, color: 0xffd0ff, power: true, desc: 'Restore Health 200 pts. Once a day.' },
   lovers_kiss: { id: 'lovers_kiss', name: "Lover's Kiss", school: 'alteration', min: 0, cost: 0, kind: 'self', shield: 30, duration: 60, color: 0xff90c0, power: true, desc: 'Shield 30% for 60 secs. Once a day.' },
+  spirit_deer: { id: 'spirit_deer', name: 'Summon Spirit Hart', school: 'conjuration', min: 0, cost: 38, kind: 'summon', creature: 'spirit_deer', duration: 60, color: 0x9affd0, desc: 'Call a Spirit Hart of the Greenheart for 60 secs. It follows you, and while you are hurt it mends your wounds every few seconds.' },
   moonshadow: { id: 'moonshadow', name: 'Moonshadow', school: 'illusion', min: 0, cost: 0, kind: 'invisibility', duration: 60, color: 0x8080a0, power: true, desc: 'Invisibility for 60 secs. Once a day.' },
 };
 

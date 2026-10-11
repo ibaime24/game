@@ -169,6 +169,8 @@ function elementalStrike(attacker, target, w, power) {
 /** Central damage pipeline. Returns damage actually dealt. */
 export function applyHit(target, hit) {
   if (!target || target.dead) return 0;
+  // chipmunks are not hurt, only tagged (and only by arrows)
+  if (target.def?.taggable) { if (hit.kind === 'arrow' && hit.attacker?.isPlayer) game.tagChipmunk(target); return 0; }
   let amount = hit.amount;
   const attacker = hit.attacker;
   const physical = hit.kind === 'melee' || hit.kind === 'arrow';

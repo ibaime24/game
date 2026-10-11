@@ -148,6 +148,15 @@ export const TEMPLATES = {
     faction: 'neutral', band: 'frostfang', dialogue: 'gorbag',
     taunts: ['Gorbag crush tiny thief!', 'Moonfeast will have meat after all!', 'FROSTFANG! To Gorbag!'],
   },
+  // ---------------- The Greenheart
+  chipmunk: {
+    name: 'Chipmunk', body: { kind: 'quad', color: 0xb0743c, len: 0.36, height: 0.2, headSize: 0.09, eyes: 0x1a1008 }, faction: 'wild', taggable: true,
+    health: 3, damage: 0, speed: 4.2, reach: 1, attackRate: 1, level: 1, ai: 'prey', shy: 7, wander: 9, loot: 'none', radius: 0.22,
+  },
+  spirit_deer: {
+    name: 'Spirit Hart', body: { kind: 'quad', color: 0xc8ffe8, len: 1.15, height: 1.0, headSize: 0.17, antlers: true, eyes: 0xffffff }, faction: 'ally', summon: true, spirit: 0x7affc0,
+    health: 140, damage: 0, speed: 7.5, reach: 1.5, attackRate: 1, level: 5, ai: 'support', loot: 'none', radius: 0.5, ghostly: true,
+  },
   // ---------------- the Mythic Dawn
   dawn_assassin: {
     name: 'Mythic Dawn Agent', body: { kind: 'human', race: 'random', robe: true, shirt: 0x8a1414, hood: true, kitTint: 0xb02020 }, weapon: 'dawn_blade', cultist: true,
@@ -220,6 +229,7 @@ export const LEVELED = {
   snow: [['wolf', 1, 3], ['timber_wolf', 3, 3], ['deer', 1, 1]],
   rime: [['ice_wraith', 1, 3], ['frost_atronach', 2, 2], ['skeleton', 1, 1]],
   rabbits: [['snow_rabbit', 1, 1]],
+  greenheart: [['deer', 1, 2], ['doe', 1, 3], ['chipmunk', 1, 4]],
 };
 
 export function pickLeveled(list, playerLevel, rand = Math.random) {
@@ -308,6 +318,13 @@ export const NPCS = [
     head: 'goblin', skin: 0x7a9a5a, shirt: 0x5a4a6a, pants: 0x3a2a18, scale: 0.78, hunch: 0.35, sleeves: false, hairStyle: 'bald',
     ai: 'melee', weapon: 'iron_dagger', health: 70, speed: 5, reach: 2.0, attackRate: 1.3, level: 4, fixedLevel: true, loot: 'goblin', extraLoot: ['snikkit_key'],
     taunts: ['NOT THE RABBITS!', 'Snikkit bites! Snikkit bites HARD!', 'You leave Fluff alone!'] },
+  // The Greenheart: the Bosmer of Falinor
+  { id: 'eranwe', tpl: 'citizen', name: 'Eranwe Greenfletch', race: 'bosmer', cell: 'greenheart', x: -66, z: -40, dialogue: 'eranwe', female: true, kitOutfit: 'ranger', kitTint: 0x4a7a34, shirt: 0x4a7a34, hair: 0xc89040, hairStyle: 'long', essential: true, stationary: true, weapon: 'elven_bow', idleAnim: 'Idle_FoldArms_Loop' },
+  { id: 'velandil', tpl: 'citizen', name: 'Treethane Velandil', race: 'bosmer', cell: 'greenheart', x: 0, z: 0, dialogue: 'velandil', female: true, robe: true, shirt: 0x6a8a3a, kitTint: 0x8aaa4a, hair: 0xe0e0d0, hairStyle: 'long', essential: true, stationary: true, onPlatform: true },
+  { id: 'mirieth', tpl: 'citizen', name: 'Mirieth', race: 'bosmer', cell: 'greenheart', x: 16.8, z: 0.4, dialogue: 'mirieth', merchant: 'bosmer', female: true, kitOutfit: 'ranger', kitTint: 0x8a6a3a, shirt: 0x8a6a3a, hair: 0x3a2a1a, hairStyle: 'long', essential: true, stationary: true },
+  { id: 'thaldir', tpl: 'citizen', name: 'Thaldir', race: 'bosmer', cell: 'greenheart', x: 18, z: 18, wander: 10, dialogue: 'falinor_folk', kitOutfit: 'ranger', kitTint: 0x5a6a2a, shirt: 0x5a6a2a },
+  { id: 'ninwe', tpl: 'citizen', name: 'Ninwe', race: 'bosmer', cell: 'greenheart', x: -16, z: 16, wander: 10, dialogue: 'falinor_folk', female: true, shirt: 0x7a5a2a, hairStyle: 'long' },
+  { id: 'aralen', tpl: 'citizen', name: 'Aralen', race: 'bosmer', cell: 'greenheart', x: -6, z: 30, wander: 12, dialogue: 'falinor_folk', kitOutfit: 'ranger', kitTint: 0x3a5a3a, shirt: 0x3a5a3a },
   { id: 'roxey_keeper', tpl: 'citizen', name: 'Mirabelle Monet', race: 'breton', cell: 'world', x: 64, z: 40, wander: 4, dialogue: 'innkeeper_roxey', merchant: 'food', shirt: 0x7a5a6a, female: true, essential: true },
 ];
 

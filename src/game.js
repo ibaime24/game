@@ -26,7 +26,9 @@ import { Actor } from './actors/actor.js';
 import { pickLeveled, NPCS } from './data/actors.js';
 import { ITEMS, Inventory, rollLoot } from './data/items.js';
 import { QuestLog, QUESTS } from './data/quests.js';
-import { createWorldCell, createInteriorCell, createOblivionCell } from './world/cells.js';
+import { createWorldCell, createInteriorCell, createOblivionCell, createGreenheartCell } from './world/cells.js';
+import { windUniform } from './world/vegetation.js';
+import { GH } from './world/greenheart.js';
 import { LOCATIONS, snowCover } from './world/layout.js';
 import { setWindowGlow } from './world/builder.js';
 import { canLevelUp, detectChance, SKILL_IDS } from './data/stats.js';
@@ -41,6 +43,8 @@ import { updateLegendary } from './world/legendary.js';
 const _emitPos = new THREE.Vector3();
 const _torchTip = new THREE.Vector3();
 const _snowFog = new THREE.Color();
+const _ghTint = new THREE.Color();
+const _mootCol = new THREE.Color();
 const _whiteFlake = new THREE.Color(0.95, 0.97, 1.0);
 const _ghostV = new THREE.Vector3(), _ghostQ = new THREE.Quaternion(), _ghostE = new THREE.Euler(), tmpV = new THREE.Vector3();
 export const TIMESCALE = 30; // game seconds per real second
@@ -60,6 +64,7 @@ export const FAST_TRAVEL = {
   wayshrine_dibella: { x: -244, z: 148, yaw: 0 },
   roxey_inn: { x: 66, z: 46, yaw: 0 },
   wintersmeet: { x: -182, z: -514, yaw: 0 },
+  hollow_elder: { x: -553, z: -95, yaw: Math.PI / 2 },
   hobs_wagon: { x: 570, z: 236, yaw: -1.2 },
 };
 
@@ -438,6 +443,7 @@ export const game = {
     let c;
     if (id === 'world') throw new Error('world not built');
     if (id === 'oblivion') c = createOblivionCell(this);
+    else if (id === 'greenheart') c = createGreenheartCell(this);
     else c = createInteriorCell(this, id);
     this.attachFirelight(c);
     this.freezeStatic(c);
@@ -456,6 +462,7 @@ export const game = {
     await nextFrame();
     await nextFrame();
     if (this.corwynScene) this.abortCorwynScene();
+    if (this.moot) this.endMoot(false, true);
     if (this.cell) {
       this.scene.remove(this.cell.group);
       for (const a of this.cell.actors) this.scene.remove(a.group);
@@ -485,6 +492,7 @@ export const game = {
     if (!p) {
       if (id === 'world') p = this.doorReturns._last || FAST_TRAVEL.sewer;
       else if (id === 'oblivion') p = this.oblivionReturn || cell.arrival;
+      else if (!cell.interior && cell.arrival) p = cell.arrival;
       else p = cell.meta.doorArrival || cell.meta.arrival;
     }
     const y = cell.collision.groundHeight(p.x, p.z, 1000);
@@ -571,7 +579,7 @@ export const game = {
       this.scene.background = null;
     }
     this.audio.setMusic(cell.music);
-    this.setLightPoolSize(cell.interior ? 8 : 4);
+    this.setLightPoolSize(cell.interior || id === 'greenheart' ? 8 : 4);
     this.updateLights(0);
     await nextFrame();
     this.state = prevState === 'loading' || prevState === 'boot' || prevState === 'chargen' ? 'playing' : prevState;
@@ -897,6 +905,7 @@ export const game = {
     this.tickWhiteHare();
     this.tickDog();
     this.tickBunnies();
+    if (this.moot) this.tickMoot();
     // Henrietta glows, and can be caught if you get right up close
     if (c.id === 'world' && this.flags.wizardQuest && !this.flags.henCaught) {
       const hen = c.actors.find((a) => a.uid === 'henrietta' && !a.dead);
@@ -2162,6 +2171,103 @@ export const game = {
     else this.ui.showMessage(t.name, `You lift the ${t.name} piece by piece from its stand: ${ids.map((i) => ITEMS[i].name).join(', ')}.\n\n${first.desc}\n\n(Wear several pieces for the full look; each one carries its own enchantment.)`);
   },
 
+  // ----------------------------------------------------------------- The Chipmunk Moot
+  startMoot(eranwe) {
+    if (this.moot) return;
+    const p = this.player;
+    // a bow in hand and blunted arrows on the string
+    if (!p.hasBow()) {
+      if (!p.inventory.has('practice_bow')) this.giveItem('practice_bow', 1);
+      p.equip(p.inventory.has('practice_bow') ? 'practice_bow' : Object.keys(ITEMS).find((id) => ITEMS[id].skill === 'marksman' && p.inventory.has(id)), true);
+    }
+    if (p.inventory.count('blunt_arrow') < 12) this.giveItem('blunt_arrow', 20);
+    p.equipped.arrow = 'blunt_arrow';
+    p.weaponOut = true;
+    const G = GH.grove;
+    const chips = [];
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.3, d = 5 + Math.random() * 10;
+      const x = G.x + Math.cos(a) * d, z = G.z + Math.sin(a) * d;
+      const c = this.spawnCreature(this.cell, 'chipmunk', x, 0, z, { uid: 'moot_chip_' + i, yaw: Math.random() * 6.28 });
+      c.home.set(G.x, c.pos.y, G.z);
+      c.def = { ...c.def, wander: 13 };
+      this.particles.burst(c.center(), 'magic', 6, 0xffd060);
+      chips.push(c);
+    }
+    this.moot = { start: this.clockT, dur: 120, count: 0, need: 10, chips, eranwe };
+    eranwe?.say('The song begins! Ten, outlander! TEN!', true);
+    this.audio.play('chime', 0.8);
+    this.audio.play('lute', 0.6);
+    if (!this._mootHud) {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);padding:8px 22px;border-radius:6px;background:rgba(30,40,20,0.78);border:1px solid #c8b060;color:#f4ecc8;font:600 20px "Cinzel", serif;letter-spacing:1px;z-index:40;pointer-events:none;text-shadow:0 1px 3px #000';
+      document.body.appendChild(el);
+      this._mootHud = el;
+    }
+    this._mootHud.style.display = 'block';
+  },
+  tickMoot() {
+    const M = this.moot;
+    const left = Math.max(0, M.dur - (this.clockT - M.start));
+    this._mootHud.textContent = `Chipmunks tagged: ${M.count} / ${M.need}   ·   ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+    if (M.count >= M.need) this.endMoot(true);
+    else if (left <= 0) this.endMoot(false);
+  },
+  endMoot(won, quiet = false) {
+    const M = this.moot;
+    this.moot = null;
+    if (this._mootHud) this._mootHud.style.display = 'none';
+    for (const c of M.chips) if (!c.dead && this.cell.actors.includes(c)) { this.particles.burst(c.center(), 'magic', 5, 0xffd060); this.removeActor(c); }
+    if (quiet) return;
+    if (won) {
+      this.quests.set('sq_moot', 20, this.day());
+      this.audio.play('levelUp', 0.7);
+      M.eranwe?.say('TEN! The song is not even over! Come here, outlander!', true);
+      this.magic.glint(this.player.center().add(new THREE.Vector3(0, 1.2, 0)), 0xffd060, 2.5, 0.8);
+    } else {
+      M.eranwe?.say(`The song is done. ${M.count} of ten — not bad! Again, when you are ready.`, true);
+      this.ui.notify(`The Moot is over: ${M.count} of 10. Talk to Eranwe to try again.`);
+    }
+  },
+  /** A blunted arrow (any arrow, really) bops a chipmunk: it squeaks, sparkles, and scampers off offended. */
+  tagChipmunk(c) {
+    if (c.tagged || c.dead) return;
+    c.tagged = true;
+    const at = c.center();
+    this.magic.glint(at.clone().setY(at.y + 0.3), 0xffd060, 1.2, 0.4);
+    for (let i = 0; i < 10; i++) this.particles.emit({ x: at.x, y: at.y + 0.2, z: at.z, vx: (Math.random() - 0.5) * 3, vy: 1 + Math.random() * 2, vz: (Math.random() - 0.5) * 3, gravity: 4, life: 0.7, size: i % 3 ? 0.08 : 0.3, color: _mootCol.set(i % 2 ? 0xffd060 : 0xffffff), shape: i % 3 ? 'pixel' : 'star' });
+    this.audio.play('chime', 0.5);
+    c.name = 'Very Offended Chipmunk';
+    c.fleeFrom = this.player; c.fleeT = 3; c.def = { ...c.def, speed: 7 };
+    setTimeout(() => { if (this.cell.actors.includes(c)) { this.particles.burst(c.center(), 'magic', 8, 0xffd060); this.removeActor(c); } }, 1300);
+    if (this.moot && c.uid?.startsWith('moot_chip_')) {
+      this.moot.count++;
+      this.ui.notify(`Tagged! ${this.moot.count} of ${this.moot.need}`);
+    } else this.ui.notify('You bop a chipmunk with an arrow. It looks at you with enormous, wounded dignity and scampers off.');
+  },
+  /** Summoned Spirit Harts glow, trail motes, and mend you while you are hurt. */
+  tickSpiritHarts(dt) {
+    const p = this.player;
+    for (const a of this.cell.actors) {
+      if (a.def.tplId !== 'spirit_deer' || a.dead) continue;
+      const at = a.center();
+      if (Math.random() < dt * 14) this.particles.emit({ x: at.x + (Math.random() - 0.5) * 1.2, y: at.y + Math.random() * 0.8, z: at.z + (Math.random() - 0.5) * 1.2, vx: 0, vy: 0.4 + Math.random() * 0.4, vz: 0, drag: 0.5, life: 1.2, size: Math.random() < 0.3 ? 0.28 : 0.09, color: _mootCol.setRGB(0.6, 1, 0.8), shape: Math.random() < 0.3 ? 'star' : 'pixel' });
+      a.healT = (a.healT ?? 1.5) - dt;
+      if (a.healT > 0 || p.dead || p.health >= p.maxHealth - 0.5 || a.pos.distanceTo(p.pos) > 28) continue;
+      a.healT = 3;
+      const amt = Math.round(10 + p.maxHealth * 0.06);
+      p.health = Math.min(p.maxHealth, p.health + amt);
+      const to = p.center();
+      for (let i = 0; i < 18; i++) {
+        const t = i / 18;
+        this.particles.emit({ x: at.x + (to.x - at.x) * t, y: at.y + 0.6 + (to.y - at.y) * t + Math.sin(t * Math.PI) * 1.2, z: at.z + (to.z - at.z) * t, vx: (Math.random() - 0.5) * 0.3, vy: 0.5, vz: (Math.random() - 0.5) * 0.3, life: 0.6 + t * 0.4, size: i % 4 ? 0.12 : 0.35, color: _mootCol.setRGB(0.55, 1, 0.75), shape: i % 4 ? 'pixel' : 'star' });
+      }
+      this.particles.burst(to, 'heal', 16, 0x9affc0);
+      this.magic.glint(to.clone().setY(to.y + 0.8), 0x9affc0, 1.4, 0.5);
+      this.audio.play('heal', 0.45);
+    }
+  },
+
   onPlayerDeath() {
     this.state = 'dead';
     this.input.unlock();
@@ -2372,7 +2478,7 @@ export const game = {
   fastTravel(locId) {
     const dest = FAST_TRAVEL[locId];
     if (!dest) return;
-    if (this.cell.interior || this.cell.id === 'oblivion') return this.ui.notify('You cannot fast travel from here.');
+    if (this.cell.interior || this.cell.id === 'oblivion' || this.cell.id === 'greenheart') return this.ui.notify('You cannot fast travel from here.');
     if (this.inCombat()) return this.ui.notify('You cannot fast travel while enemies are nearby.');
     if (this.player.encumbrance() > this.player.carryLimit()) return this.ui.notify('You are overencumbered.');
     const d = Math.hypot(dest.x - this.player.pos.x, dest.z - this.player.pos.z);
@@ -2432,6 +2538,7 @@ export const game = {
       this.updateGhostLantern();
       this.updateWhiteHareFx(dt);
       this.updateBlades(dt);
+      this.tickSpiritHarts(dt);
       if (this.cell.id === 'world') updateLegendary(this.cell.state.legendary, this.clockT);
     }
     if (this.state === 'title' && this.titleCam) this.titleCam(dt);
@@ -2570,6 +2677,19 @@ export const game = {
       const nightMist = c.id === 'world' ? s.night : 0;
       this.scene.fog.near = 30 * (1 - wx.fog * 0.85) * (1 - nightMist * 0.4);
       this.scene.fog.far = c.id === 'oblivion' ? 320 : (this.settings.viewDist * 1.6 + 200) * (1 - wx.fog * 0.78 - wx.rain * 0.15) * (1 - nightMist * 0.45);
+      // the Greenheart: green-gold air under the canopy, short sightlines, leaves stirring, light in shafts
+      if (c.id === 'greenheart') {
+        const n = s.night;
+        this.scene.fog.color.setRGB(0.32 - n * 0.22, 0.42 - n * 0.28, 0.24 - n * 0.08);
+        this.scene.fog.near = 14; this.scene.fog.far = 240;
+        this.hemi.color.lerp(_ghTint.setRGB(0.62, 0.86, 0.5), 0.55);
+        this.hemi.groundColor.setRGB(0.18, 0.24, 0.1);
+        this.hemi.intensity *= 1.25;
+        this.sunLight.color.lerp(_ghTint.setRGB(1, 0.86, 0.55), 0.4);
+        windUniform.value = this.clockT;
+        for (const m of c.state.rays) { m.uniforms.uTime.value = this.clockT; m.uniforms.uNight.value = n; }
+        c.state.wall?.color.copy(this.scene.fog.color);
+      }
       // the snows: a pale, cold haze that thickens when it is snowing hard
       if (snowy > 0) {
         this.scene.fog.color.lerp(_snowFog.setRGB(0.78, 0.83, 0.9).multiplyScalar(0.35 + (1 - s.night) * 0.65), snowy * (0.35 + wx.overcast * 0.3));
@@ -2672,7 +2792,7 @@ export const game = {
     const cands = [];
     for (const l of c.lights) {
       if (!l.on) continue;
-      if (l.night && c.id === 'world' && night < 0.3) continue;
+      if (l.night && c.hasSky && c.id !== 'oblivion' && night < 0.3) continue;
       const d = l.pos.distanceTo(cam);
       if (d > l.distance + 40) continue;
       cands.push([l.priority ? d - 60 : d, l]);

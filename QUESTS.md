@@ -41,6 +41,7 @@ Coordinates are overworld metres: north is −Z and east is +X. Chorrol is at (�
 | `sq_bunnies` | Ten White Rabbits | Side quest, three paths | Snikkit (goblin, his den NE of Wintersmeet); rumour from Gunnar | 15–25 min | White rabbits across the snows |
 | `sq_pup` | A Crown of Starflowers | Side quest, companion | Hob Furrowfield (wandering by his wagon, east of Lake Rumare) | 5–10 min | A dog |
 | `sq_hare5` | Lightwatch | Wintersmeet questline, part 5 (festival) | Sigrun Warmhands | 10 min | Mantle of the First Snow |
+| `sq_moot` | The Chipmunk Moot | Side quest, archery challenge | Eranwe Greenfletch (Tumbling Grove, Falinor, in the Greenheart) | 5–10 min | Summon Spirit Hart spell |
 
 The QuestLog only moves forward: `set(q, stage)` ignores any stage at or below the current one. A stage marked `done` completes the quest.
 
@@ -496,6 +497,38 @@ Ilvaine took Maela's lantern and bound her ghost to it. The son, **Tam**, aged s
 
 **Snow region:** expanded. Besides everything north of the wandering snowline, snow now lies on all high ground above 58 m (`SNOW_HEIGHT`) everywhere in the world, so the mountain ring and every ridge wear white caps. The highest peaks hold snow even on their steep faces. The same rule is used by the terrain, the frosted trees and rocks (`SNOW_GLSL`), the grass, the footsteps and the snowfall.
 
+### `sq_moot` — The Chipmunk Moot (5–10 minutes, archery challenge)
+
+**Premise:**
+- **The Greenheart** (cell `greenheart`) is a pocket of Valenwood that Y'ffre "told" into the north. You reach it through **the Hollow Elder** (`hollow_elder`, −565, −95), a colossal split oak deep in the western woods below the mountains, whose doorway glows green and gold. Inside, the forest is 430 m across: graht-oaks 60–100 m tall, a closed roof of leaves, shafts of light, glowing mushrooms, fireflies and a lily pond. You leave through the glowing hollow in the giant behind the arrival glade (it returns you to the Hollow Elder). There is no fast travel out of the Greenheart.
+- **Falinor** is the Bosmer town around the **Great Tree**: a ring platform 8 m up, reached by a spiral stair, with two pods and the (locked) Treethane's Hall. Five more pod-houses stand on the ground. The town also has Mirieth's stall, the Shrine of Y'ffre, an archery range and lantern posts.
+- **The Moot:** every Falinor child sits the Moot before being allowed a real bow. You must tag ten chipmunks with arrows in **the Tumbling Grove** (−78, −48), west of town, before Eranwe's song ends.
+
+**Stages:**
+1. **10:** Eranwe, *The Chipmunk Moot*. She gives you a **Greenheart Practice Bow** (`practice_bow`) and 40 **Blunted Practice Arrows** (`blunt_arrow`). *The rules* explains the contest.
+2. **The contest:** say *"I'm ready. Start the Moot."* (only in the Greenheart). After the dialogue closes, `startMoot` runs:
+   - It equips a bow and blunt arrows, topping you up to 20 if you are low.
+   - 16 chipmunks (`moot_chip_0`…`15`) appear around the grove.
+   - A HUD counter shows tags and a 2:00 timer.
+   - **Tagging:** chipmunks (`chipmunk` template, `taggable: true`) take no damage at all. Only an arrow fired by the player tags one (`tagChipmunk`): a gold glint and star-sparkles, then it is renamed *Very Offended Chipmunk*, flees, and vanishes after 1.3 s. Swords, spells and fists do nothing.
+   - **Losing:** if the timer runs out, Eranwe announces your score. Talk to her to try again (any number of times). Leaving the Greenheart mid-contest quietly cancels it.
+3. **20:** ten tagged before the song ends (`endMoot(true)`).
+4. **100:** Eranwe, *The Spirit Hart*. She teaches you **Summon Spirit Hart** (`spirit_deer`, Conjuration, 38 magicka, 60 s) and gives 75 gold.
+
+**The Spirit Hart (`spirit_deer`):**
+- A deer of translucent green light (`spirit` material, faction `ally`, `ai: 'support'`) that follows you and never fights.
+- While you are hurt and within 28 m, every 3 s it heals you for 10 + 6% of your max health (`tickSpiritHarts`). A stream of green motes arcs from it to you, with a glint and a chime. It trails sparkles as it walks.
+
+**People of Falinor** (all Bosmer, cell `greenheart`):
+- **Eranwe Greenfletch** (`eranwe`): the bow-master. She stands in the Tumbling Grove.
+- **Treethane Velandil** (`velandil`): on the Great Tree's ring platform.
+- **Mirieth** (`mirieth`): runs a stall (merchant `bosmer`) selling blunt and real arrows, bows, potions, venison and mead.
+- **Thaldir, Ninwe and Aralen:** wander the town (dialogue `falinor_folk`).
+
+Everyone shares the topics *The Greenheart* and *The Green Pact*. Deer, does and chipmunks roam the forest (`greenheart` spawn list).
+
+**New items:** `practice_bow`, `blunt_arrow`. **New spell:** `spirit_deer`. **New templates:** `chipmunk`, `spirit_deer`. **Flags:** none (the contest state is `game.moot`, which is never saved).
+
 ---
 
 ## Quest locations
@@ -529,6 +562,8 @@ Ilvaine took Maela's lantern and bound her ghost to it. The son, **Tam**, aged s
 | Frostfang Hollow | `frostfang_hollow` | (205, −552) | `sq_bunnies` (Chief Gorbag) |
 | Hob's Wagon | `hobs_wagon` | (580, 240), the meadow east of Lake Rumare | `sq_pup` |
 | The Rime Spire | `rime_spire` | (−92, −636), on a ledge NE of Wintersmeet | `sq_hare2`, `sq_hare4` (`rime_spire` interior) |
+| The Hollow Elder | `hollow_elder` | (−565, −95), deep in the western woods; door faces east | entrance to the Greenheart (`sq_moot`) |
+| Falinor / the Tumbling Grove | — | Greenheart cell: town (0, −12), grove (−78, −48), range (−50, 20) | `sq_moot` |
 
 **Interiors:**
 - `inn`: the Grey Mare. Slots 1 Emfrid, 2 Rimalus Bruiant (Tam Corwyn), 3 Ysolde, 4 Corvin (home), 5 Tillmon, 6 Sheogorath.

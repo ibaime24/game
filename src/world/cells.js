@@ -11,6 +11,7 @@ import { buildWorldScatter } from './scatter.js';
 import { buildQuestSites, buildMainQuestSites, buildCorwynSites, buildHobsWagon } from './questSites.js';
 import { buildWintersmeet, buildWhiteHareSites, buildRabbitSites } from './wintersmeet.js';
 import { buildLegendarySwords, buildArmorDisplay } from './legendary.js';
+import { buildGreenheart, buildHollowElder, GH } from './greenheart.js';
 import { CHORROL_CRITTERS } from './chorrol.js';
 import { buildKitRig } from '../actors/kitRig.js';
 import { isKitReady, getClip } from '../actors/characterKit.js';
@@ -153,6 +154,7 @@ export function createWorldCell(game) {
   state.hob = buildHobsWagon(b, terrain, game);
   state.rabbits = buildRabbitSites(b, terrain, game);
   state.legendary = buildLegendarySwords(b, terrain, game);
+  buildHollowElder(b, terrain, LOCATIONS.hollow_elder);
   if (b.libramPage && !game.taken.libram_page_oak_pickup) {
     const pg = b.libramPage;
     const it = game.placeItem(b, 'libram_page_oak', pg.x, pg.y, pg.z, 'libram_page_oak_pickup', { rot: 0.6, radius: 0.6 });
@@ -374,6 +376,32 @@ function buildHallOfHours(game, cell, b, meta) {
 }
 
 // ------------------------------------------------------------------ the Deadlands
+/** The Greenheart: a little Valenwood beyond the Hollow Elder. */
+export function createGreenheartCell(game) {
+  const cell = new Cell('greenheart', 'The Greenheart', false);
+  const b = new Builder(cell.group, null);
+  b.col = new CollisionWorld(() => 0, 16);
+  const state = buildGreenheart(b, game);
+  cell.collision = b.col;
+  cell.terrain = state.terrain;
+  cell.state = state;
+  cell.absorb(b);
+  if (state.scatter) cell.scatter = state.scatter.build(cell.group);
+  mergeStatic(cell.group, keepSet(cell));
+  cell.bounds = GH.bounds;
+  cell.hasSky = true;
+  cell.sunlit = true;
+  cell.music = 'explore';
+  cell.lightLevel = 0.6;
+  cell.arrival = GH.arrival;
+  // the folk of Falinor, deer in the glades and chipmunks everywhere
+  for (const npc of NPCS.filter((n) => n.cell === 'greenheart')) game.spawnNpc(cell, npc, npc.x, cell.collision.groundHeight(npc.x, npc.z, 500), npc.z);
+  const S = (list, x, z, count, radius) => cell.spawns.push({ list, x, z, count, radius, active: false, actors: [], respawnAt: -1 });
+  for (const [x, z] of [[60, 80], [-70, 90], [90, -60], [-110, 30], [40, -120], [-40, -140], [130, 60], [-140, -90]]) S('greenheart', x, z, 3, 12);
+  for (const [x, z] of [[20, 30], [-30, 30], [10, -45], [-18, -40]]) S('greenheart', x, z, 2, 6);
+  return cell;
+}
+
 export function createOblivionCell(game) {
   const cell = new Cell('oblivion', 'The Deadlands', false);
   const b = new Builder(cell.group, null);

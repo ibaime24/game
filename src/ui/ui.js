@@ -47,7 +47,7 @@ const TIPS = [
   'Beware the Ayleid Lich-Knight of Vilverin.',
 ];
 
-const CELL_TITLES = { world: 'Cyrodiil', inn: 'Chorrol, The Grey Mare', shop: 'Chorrol, Northern Goods and Trade', priory: 'Weynon Priory', vilverin: 'Vilverin', sigil: 'Sigil Keep', oblivion: 'The Deadlands' };
+const CELL_TITLES = { world: 'Cyrodiil', inn: 'Chorrol, The Grey Mare', shop: 'Chorrol, Northern Goods and Trade', priory: 'Weynon Priory', vilverin: 'Vilverin', sigil: 'Sigil Keep', oblivion: 'The Deadlands', greenheart: 'The Greenheart', snow_hare: 'The Snow Hare', gloam_barrow: 'Gloamwood Barrow', rime_spire: 'The Rime Spire' };
 
 const fmt = (n) => Math.round(n).toLocaleString();
 const glyphFor = (it) => {
