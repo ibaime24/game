@@ -326,7 +326,7 @@ export class ViewModel {
     this.camera.fov = mainCam.fov;
     this.camera.aspect = mainCam.aspect;
     this.camera.updateProjectionMatrix();
-    this.root.visible = !p.thirdPerson && !p.dead && game.state === 'playing' && (this.drawOffset < 0.97 || p.castT >= 0 || !!this.torchMesh);
+    this.root.visible = !p.showBody && !p.dead && game.state === 'playing' && (this.drawOffset < 0.97 || p.castT >= 0 || !!this.torchMesh);
     this.scene.environment = game.scene.environment;
     this.scene.environmentIntensity = (game.scene.environmentIntensity ?? 0.4) * 1.4;
     // lighting follows world

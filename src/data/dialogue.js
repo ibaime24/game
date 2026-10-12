@@ -1360,6 +1360,180 @@ DIALOGUE.brisk = {
   ],
 };
 
+// ---------------------------------------------------------------- The Hollow King (the Mages Guild of Chorrol)
+const MG = (g, q) => g.quests.stage(q);
+const speech = (g) => g.player.ch.skills.speechcraft || 0;
+
+DIALOGUE.teekeeus.topics.unshift(
+  { id: 'hall', label: 'The Guild hall', show: (g) => MG(g, 'sq_mg1') < 10,
+    say: (g) => {
+      g.quests.set('sq_mg1', 10, g.day());
+      g.giveItem('ward_token', 1);
+      g.giveItem('guild_supplies', 1);
+      return '*The Argonian\'s crest flattens.* Nine days. Nine days Teekeeus has sold spells in the rain while the hall stands warm and empty. Not empty. Sealed. The Magister says "a scrying accident". Teekeeus has been in the Guild forty years. Teekeeus knows what an accident sounds like, and it does not sound like knocking on the shutters at night.\n\n*He presses a disc of blue glass into your hand.* This morning a note came under the door. The Magister asks for "someone who can be trusted with fire". The ward will let through whoever carries this token. Take them the crate, too. They will be out of tea. A Guild without tea is a Guild without hope.';
+    } },
+  { id: 'hall_after', label: 'The Guild', show: (g) => MG(g, 'sq_mg1') >= 100,
+    say: (g) => g.flags.mgMagister ? 'Magister! *He bows so low his crest touches the cobbles.* Teekeeus always said you had the look. Teekeeus said it to nobody, but he said it.' : 'The hall is open again. Teekeeus can sell spells INDOORS. You do not know what this means to a lizard in a Chorrol autumn.' },
+);
+
+DIALOGUE.ondine = {
+  greeting: (g, npc) => {
+    if (npc.uid === 'ondine_follow') return pick(['Keep the Ember up. The dark down here is older than it looks.', '*She is muttering the founders\' rite under her breath, over and over, like a woman checking her pockets for keys.*', 'Forty years in this Guild and I have never been this far from a library.']);
+    if (g.flags.mgMagister) return pick(['Magister. *She says it with a straight face, and then doesn\'t quite manage it.* Tea?', 'The pool shows only the sky now. I keep looking anyway.']);
+    if (MG(g, 'sq_mg1') <= 20 && !g.flags.mgLamps) return '*A tall Breton woman in a frost-stiffened robe looks up from beside a pool of black ice, holding a teacup in both hands as if it were the last warm thing in the world.* You came. And you brought — is that tea? Teekeeus, you magnificent lizard. Sit. No, don\'t sit, everything is frozen to everything. Stand near the lamps. They don\'t work either.';
+    return pick(['*She is watching the pool.* It is never quite still. Have you noticed? Even frozen.', 'Ondine Vell. Magister of this Chapter for nineteen years, and of this icebox for nine days.']);
+  },
+  topics: [
+    { id: 'pool', label: 'The pool', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg1') >= 20 && !g.flags.mgLamps,
+      say: () => 'The Founders\' Pool. Every Chapter has a scrying basin; ours is older than the Chapter itself. Nine days ago Bastien was on watch — Bastien Lorne, my best apprentice, eighteen and too clever by a mile — and the pool froze, all at once, like a breath held. And something looked up out of the ice at him.\n\nHe came to me white as paper and said a skeleton in a crown had looked at him and smiled. By morning he was gone. I sealed the hall that night, with all of us inside, in case whatever looked out could also look in.\n\nThe Warding Lamps round the pool went out the same night. They won\'t take an ordinary flame. Merle knows more about the lamps than I do. She reads the boring books.' },
+    { id: 'key', label: 'The study key', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg1') >= 30 && MG(g, 'sq_mg1') < 100 && !g.player.inventory.has('guild_study_key') && !g.player.inventory.has('guild_charter'),
+      say: (g) => { g.giveItem('guild_study_key', 1); return 'The Charter? It\'s in my study, in the case on the desk. *She works a long brass key off her chain.* Nobody has read it in forty years except to check the founders spelled their own names right. If it tells you how to light those lamps, I will read it every night for the rest of my life.'; } },
+    { id: 'flame', label: 'The Founders\' Flame', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg1') === 50,
+      say: (g) => {
+        g.ui.queueAfterDialogue = () => g.guildMembership();
+        return '*She stands at the edge of the pool for a long time, looking into the blue-white fire, before she says anything.*\n\nThen it is true. All of it. The Charter\'s margin, the old Arch-Mage\'s riddles, the lamps nobody was allowed to let go out.\n\nThe first Magister of this Chapter was a man called Severin Ashgrave. Brilliant. Kind, they say, once. He believed a mind was the only thing in the world worth keeping, and he found a way to keep his: he split his soul into three Hearts of black ice and became a lich. His own friends — Corve, Stonevoice, Thalindor, the names on our Charter — sealed him under the Jerall Mountains, in the halls he had dug for himself. They could not kill him while his Hearts beat. And they could not break the Hearts, because the only fire hot enough to do it is THIS one, and they had not yet lit it. So they hid the Hearts, one each, as far apart as they could, and swore never to say where.\n\nThe seal is failing. The Gates thin everything. And the face in the ice was his.\n\n*She dips a little Guild lantern into the flame, and the flame comes up out of the pool into the glass as if it had been waiting to be asked.*';
+      } },
+    { id: 'bastien', label: 'Bastien', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg2') === 50,
+      say: (g) => {
+        g.quests.set('sq_mg2', 100, g.day());
+        if (!g.player.spells.includes('sunbolt')) g.player.spells.push('sunbolt');
+        g.flags.mgHearts = true;
+        g.quests.set('sq_mg3', 10, g.day());
+        g.applyPersistentState?.(g.cell);
+        g.ui.notify('You learned Sunbolt.');
+        return '*She reads Aldous\'s translation twice. Then she folds it very small and puts it in her sleeve.*\n\nNot taken. Fetching. *She looks at the empty cot by the window.* I should have seen it. He never could leave a locked door alone. Neither could I, at his age.\n\nThe Spire, the Ruin, the Hollow. The Rime Spire, in the north — Hrolfa Stonevoice built a watchtower there. Vilverin, the Ayleid ruin by the lake — Thalindor loved the old elves. And Corve sealed hers in a cave under the Jerall, which on a modern map is — *she squints* — Frostfang Hollow. Goblins. Of course it is goblins.\n\nTake this. *White fire gathers in her palm and jumps to yours.* Sunbolt. The dead hate it more than they hate anything. Find the Hearts before he does. Hold each one up in the Ember\'s light, and break it.';
+      } },
+    { id: 'hearts', label: 'The Hearts', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg3') === 40,
+      say: (g) => {
+        g.ui.queueAfterDialogue = () => g.ondineJoins();
+        return 'Two broken, and the third in Bastien\'s hands, going north-east to his master. *She is already pulling on a travelling cloak.*\n\nThe Hollow Gate is under the Jerall past Frostfang Hollow. It opens only to the founders\' rite and the founders\' fire, and I am the only living person who knows the rite, because I spent last night learning it off the back of the Charter.\n\nI\'m coming with you. Don\'t argue. I made that boy an apprentice. I\'ll bring him home or I\'ll bury him myself.';
+      } },
+    { id: 'over', label: 'It\'s over', show: (g, npc) => npc.uid === 'ondine' && MG(g, 'sq_mg5') === 40,
+      say: (g) => {
+        g.ui.queueAfterDialogue = () => g.guildMagister();
+        return '*She has been sitting by the pool waiting for you, and she stands too fast and has to hold the rim.*\n\nIt thawed. An hour ago. All at once, like a breath let go. It shows only the sky now. *She laughs, a little shakily.* I didn\'t know whether that meant you\'d won or you\'d died. I decided it meant you\'d won, because otherwise I\'d have had to go down there myself, and my knees are sixty-three years old.\n\nThe Chapter needs a Magister who has seen what the Charter is for. I have been Magister for nineteen years and I only found out nine days ago. *She takes off the heavy chain of office and holds it out.* Don\'t make me say anything sentimental. Take the study. The chest is yours. The bed is terrible.';
+      } },
+    { id: 'ashgrave', label: 'Severin Ashgrave', show: (g) => MG(g, 'sq_mg1') >= 100,
+      say: (g) => g.flags.ashgraveDead ? 'His name is cut under the floor of the pool. "S. Ashgrave, First Magister, who chose this stone." I am leaving it there. We should remember the price, not just the man.' : 'He chose this hall\'s stone. He lit its first lamp. And every Magister since has kept that flame burning without knowing it was the only thing between Chorrol and him. I find that either very beautiful or very stupid. Probably both. Most of the Guild is.' },
+    { id: 'guild', label: 'The Guild', show: (g, npc) => npc.uid === 'ondine',
+      say: (g) => g.flags.mgMember ? 'Associates may use the library, the beds and the spell table. Apprentices may use the library and complain. Magisters may use everything and are blamed for everything.' : 'The Guild of Mages: we study, we teach, we sell spells to people who should not have them. Help us, and you\'ll be one of us.' },
+  ],
+};
+
+DIALOGUE.merle = {
+  greeting: (g) => {
+    if (g.flags.bastienHome) return pick(['He\'s back. He\'s actually back. He keeps apologising to the furniture.', 'Bastien wrote to his mother. Four pages. She wrote back eight.']);
+    if (g.flags.bastienDead) return '*She is sitting at Bastien\'s desk, very still, with one of his books open in front of her. She doesn\'t look up.* I\'m keeping it how he left it.';
+    return pick(['*A young Nord woman in three blankets and a pointed hat peers at you over a steaming mug.* Are you real? Sorry. Nine days. We started a betting pool on who\'d go mad first. I had Ondine. It\'s been me.', 'Don\'t touch the pool. Don\'t look in the pool. I looked in the pool. Don\'t.']);
+  },
+  topics: [
+    { id: 'lamps', label: 'The Warding Lamps', show: (g) => MG(g, 'sq_mg1') >= 20 && MG(g, 'sq_mg1') < 40 && !g.flags.mgLamps,
+      say: (g) => {
+        if (MG(g, 'sq_mg1') < 30) g.quests.set('sq_mg1', 30, g.day());
+        return 'The lamps are lit from the Founders\' Flame, which "lives in the stone" — that\'s what the old index says. Every apprentice learns the line and nobody learns what it means. But the rite for waking it is written down. It has to be. It\'ll be in the Charter of the Chapter, and the Charter\'s in Ondine\'s study, behind the gate. She\'s got the key. She has every key. She sleeps on them like a dragon.';
+      } },
+    { id: 'bastien', label: 'Bastien', show: (g) => MG(g, 'sq_mg1') >= 20 && !g.flags.bastienHome && !g.flags.bastienDead,
+      say: (g) => {
+        const give = !g.player.inventory.has('bastien_letter') && !g.flags.mgLetterGiven;
+        if (give) { g.flags.mgLetterGiven = true; g.giveItem('bastien_letter', 1); }
+        return 'He\'s my best friend. He\'s the cleverest person in this Guild, including Ondine, and he knows it, which is his problem. He never could leave a question alone. If something spoke to him out of that pool, he\'ll have answered it.' + (give ? '\n\n*She takes an envelope from her sleeve, sealed with a violet.* This came for him the day after he went. His mother writes every week. He stopped opening them in the spring — said he was too busy. If you find him... give it to him. Make him read it.' : '');
+      } },
+    { id: 'guildlife', label: 'Guild life', say: () => 'Mornings, theory. Afternoons, practice. Evenings, putting out whatever caught fire during practice. Teekeeus brings sweetrolls on Fridays. It\'s a good life. It was a good life. It will be again. *She doesn\'t sound sure.*' },
+  ],
+};
+
+DIALOGUE.aldous.topics.unshift(
+  { id: 'cipher', label: 'Bastien\'s notebook', show: (g) => MG(g, 'sq_mg2') === 40 && g.player.inventory.has('bastien_notes'),
+    say: (g) => {
+      g.quests.set('sq_mg2', 50, g.day());
+      return '*He takes the notebook, opens it at the rings, and goes completely silent, which you have never seen him do.*\n\nAshgrave\'s Sigil-Script. Nobody has written in this for four hundred years. Oh, this is WONDERFUL. Oh, this is TERRIBLE. *He runs a finger along the circles.* The Chorrol Chapter threw me out forty years ago for frivolity, you know. Frivolity! I said the Guild had forgotten how to have fun. I did not say it had forgotten how to be afraid. Clearly it had.\n\n*He reads aloud, slowly.* "The Master says: the Spire, the Ruin, the Hollow. Fetch my hearts and I will teach you everything. I will teach you to never stop."\n\n*He closes the book very gently.* That boy isn\'t a prisoner. He\'s a courier. Take this to Ondine. Tell her — no. Don\'t tell her I said anything. Just tell her I\'m sorry.';
+    } },
+);
+
+DIALOGUE.cassius.topics.unshift(
+  { id: 'heart', label: 'Ashgrave\'s Heart', show: (g, npc) => npc.uid === 'cassius_home' && MG(g, 'sq_mg3') >= 10 && !g.flags.heartRime,
+    say: (g) => {
+      const give = !g.flags.mgCassiusGift;
+      if (give) { g.flags.mgCassiusGift = true; g.giveItem('frost_ward', 2); }
+      return '*He puts down his cup.* The Spire. Yes. There was always a cold under the floor of the top room that wasn\'t mine. I used to stand on that flagstone by the cage and feel it humming up through my boots. I thought it was guilt. *A dry laugh.* It turns out it was a lich.' + (give ? '\n\nTake these. Frost Ward. I brewed them for the walk up the mountain. If something down there is made of winter, you\'ll want a coat.' : '');
+    } },
+);
+
+DIALOGUE.gorbag.topics.unshift(
+  { id: 'rock', label: 'The cold shiny rock', show: (g) => MG(g, 'sq_mg3') >= 10 && !g.flags.heartFrostfang,
+    say: (g) => {
+      g.ui.queueAfterDialogue = () => g.frostfangHeartGone();
+      return '*Gorbag scratches under his bear-skull helm.* Cold shiny rock? In silver cage? Goes thump, thump, thump, very creepy? Gorbag\'s grandfather\'s grandfather found it in back of cave. Gorbag used it to keep stew cold.\n\nIs gone. Sad human boy came. Thin. Big eyes. Robe. Gave Gorbag FORTY SWEETROLLS. *He holds up four fingers, then remembers, then holds up more.* FORTY. Gorbag is not made of stone. Gorbag is a little bit made of stone. But not THAT much.\n\n*He rummages in his throne and hands you a filthy scrap of paper.* Boy wrote receipt. Very polite. Went that way. *He points north-east, up into the mountains.* Gorbag told him: eat a sweetroll, sad boy. He did not eat a sweetroll.';
+    } },
+);
+
+DIALOGUE.bastien = {
+  greeting: (g, npc) => {
+    if (npc.uid === 'bastien_home') return pick(['*He looks up from a book and goes red to the ears.* Hello. Sorry. Hello. I\'m reading something BORING. On purpose. Merle says it\'s good for me.', 'I wrote to my mother. Merle checked. Twice.']);
+    if (npc.uid === 'bastien_follow') return pick(['I know the way. That\'s the worst part. I know the way.', 'Stay out of the blue fire. It isn\'t fire.']);
+    if (g.flags.bastienSaved) return '*He is sitting with his head in his hands.*';
+    return '*A thin young man in a frost-whitened apprentice\'s robe kneels by a brazier of cold blue flame, a cage of silver and black ice cradled in his lap. He looks up, and his eyes are the same blue as the fire.* He said you\'d come. He said to wait for you. He said you\'d try to talk.\n\n*His voice cracks.* Please don\'t. It\'s worse when people talk.';
+  },
+  topics: [
+    { id: 'letter', label: 'Give him his mother\'s letter', show: (g, npc) => npc.uid === 'bastien' && !g.flags.bastienSaved && g.player.inventory.has('bastien_letter'),
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.bastienRedeemed(npc, false);
+        return '*He stares at the violet seal for a long time. Then he breaks it, with shaking fingers, and reads. You watch the blue go out of his eyes a little at a time, like frost going off a window.*\n\n"...and I know you\'re busy, my clever boy, but please eat something warm, and please remember that you don\'t have to know everything to be loved..."\n\n*He folds it against his chest.* She still writes. Every week. I stopped opening them. He told me — he said they were distractions. *He holds the silver cage out to you as if it were burning him.* Take it. Please. Before he notices.';
+      } },
+    { id: 'home', label: 'Come home, Bastien', show: (g, npc) => npc.uid === 'bastien' && !g.flags.bastienSaved && !g.flags.bastienRefused,
+      say: (g, npc) => {
+        const ondine = g.cell.actors.some((a) => a.uid === 'ondine_follow' && !a.dead);
+        if (speech(g) >= 50 || (ondine && speech(g) >= 30)) {
+          g.ui.queueAfterDialogue = () => g.bastienRedeemed(npc, false);
+          return (ondine ? '*Ondine steps past you and kneels on the cold stone in front of him, the way you would with a frightened dog.* "Bastien. It\'s me. You left your cocoa on the windowsill. It froze. I kept it."\n\n' : '') + '*He makes a sound that is half a laugh and half something else.* He promised I\'d never have to stop. Never stop learning, never stop knowing, never sleep, never forget. And I thought — that\'s what I want. That\'s all I\'ve ever wanted.\n\n*He looks down at the Heart.* But he\'s been down here four hundred years, and he hasn\'t learned anything. He\'s just been… keeping. *He holds it out.* Take it. Please.';
+        }
+        g.flags.bastienRefused = true;
+        return '*He flinches.* Home. Home to what? To being the apprentice who almost understood? He\'s going to teach me EVERYTHING. *His hands tighten on the cage.* (He isn\'t listening — not to that. Something closer to his heart might reach him.)';
+      } },
+    { id: 'offer', label: 'Come with us and learn something real', show: (g, npc) => npc.uid === 'bastien' && !g.flags.bastienSaved && !!g.flags.mgMember && !g.flags.bastienOfferRefused,
+      say: (g, npc) => {
+        if (speech(g) >= 40 || npc.disposition >= 60) {
+          g.ui.queueAfterDialogue = () => g.bastienRedeemed(npc, true);
+          return 'Something real. *He says it the way you would test ice.* He never teaches. He only tells. I\'ve asked him a hundred questions and every answer is "later, when you are like me".\n\n*He stands, unsteady, the Heart held against his chest.* All right. But I want to be the one who breaks it. In front of him. I want him to see me do it.';
+        }
+        g.flags.bastienOfferRefused = true;
+        return '*He laughs, thin and cracked.* The Guild taught me to fold parchment and fetch tea. He taught me how the stars are wound. (He doesn\'t believe you. Not yet.)';
+      } },
+    { id: 'fight', label: 'Then I\'ll take it from you', show: (g, npc) => npc.uid === 'bastien' && !g.flags.bastienSaved,
+      say: (g, npc) => {
+        setTimeout(() => g.bastienFights(npc), 60);
+        return '*The blue fire in his eyes flares white.* I\'m sorry. I\'m SORRY. He said you\'d say that.';
+      } },
+    { id: 'after', label: 'How are you?', show: (g, npc) => npc.uid === 'bastien_home',
+      say: () => 'Better. Worse. Better. I dream about the ice, but I wake up and Merle\'s left a sweetroll on my desk, and it\'s hard to stay haunted with a sweetroll on your desk. I\'m going to learn everything the slow way. One boring book at a time.' },
+  ],
+};
+
+DIALOGUE.hollow_king = {
+  greeting: (g) => {
+    if (g.flags.hollowKingFighting) return '';
+    return '*On a throne of black ice sits what is left of a tall man in a magister\'s robe, rotted to lace. A crown of black ice rests on his skull, and in his eye-sockets two points of blue fire turn slowly toward you.*\n\nAh. The one with the lamp. *His voice is courteous, unhurried, faintly amused, the voice of a lecturer who has all the time in the world.* Come in. Mind the wards; my friends painted them on the floor four hundred years ago, and they still sting. Will you sit? No. Nobody ever sits.';
+  },
+  topics: [
+    { id: 'guild', label: 'The Guild', show: (g) => !g.flags.hollowKingFighting,
+      say: () => 'I built your Chapter. I chose its stone. I lit its first lamp, and I would have lit the last. Ask your Magister whose name is cut under the floor of her pool. *The blue fire flickers.* It is mine. They kept my flame burning for four hundred years to keep me out. There is a joke in that, and I have had a long time to enjoy it.' },
+    { id: 'bastien', label: 'Bastien', show: (g) => !g.flags.hollowKingFighting && (g.flags.bastienSaved || g.flags.bastienDead),
+      say: (g) => g.flags.bastienSaved ? 'You have taken my apprentice. A pity. He listened so beautifully. *A pause.* He will forget everything I taught him, you know. Mortals do. That is the whole tragedy of you.' : 'You killed the boy. *The fire in his eyes is very still.* I would have kept him. Every thought he ever had, kept for ever. You have thrown him away. And you call ME the monster.' },
+    { id: 'why', label: 'Why?', show: (g) => !g.flags.hollowKingFighting,
+      say: () => 'Because a mind is the only thing in the world worth keeping, and the world insists on throwing them away. I watched my teacher die with half a theory in her head. I watched the best of my students forget, year by year, until they were nothing but kindly old men who could not remember their own proofs. So I kept mine. Is that so terrible?\n\n*He leans forward on his throne.* I have been alone in the dark for four hundred years. I have not forgotten one thing. Not one.' },
+    { id: 'offer', label: 'Teach me', show: (g) => !g.flags.hollowKingFighting,
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.hollowKingFights(npc, true);
+        return '*The blue fire brightens with something like delight.* Yes. YES. I knew you had the look. Kneel, and give me your hand, and I will show you how the stars are wound—\n\n*His bony fingers close on yours, and the cold goes into you like a needle, and you understand, too late, that the first thing a lich teaches is how to hold still. The words of every spell you know freeze in your throat.*\n\nOh, I am sorry. That was a test. You failed it. Everyone does.';
+      } },
+    { id: 'fight', label: 'It ends here, Ashgrave', show: (g) => !g.flags.hollowKingFighting,
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.hollowKingFights(npc, false);
+        return '*He rises from the throne, and keeps rising, until he is floating a hand\'s breadth above the dais, his robe drifting as if under water.* Ends? My dear. Nothing ends. That was rather the point.';
+      } },
+  ],
+};
+
 export const MERCHANTS = {
   general: {
     gold: 800,
@@ -1374,6 +1548,7 @@ export const MERCHANTS = {
   bakery: { gold: 120, stock: ['sweetroll*12', 'bread*8', 'apple*6', 'pear*4', 'cheese*3'] },
   food: { gold: 150, stock: ['bread*5', 'cheese*4', 'apple*6', 'onion*4', 'potato*4', 'pear*3', 'venison*3', 'mead*3', 'cyrodilic_brandy*1', 'red_mushroom*3'] },
   spells: { gold: 400, stock: ['potion_magicka*4', 'blue_flower*4', 'ring_of_the_wizard'], spells: true },
+  guild: { gold: 600, stock: ['potion_magicka*6', 'potion_health*3', 'potion_health_light*4', 'frost_ward*2', 'blue_flower*6', 'ladys_smock*4', 'welkynd_stone', 'ring_of_the_wizard', 'mage_robe'] },
   brinewhistle: { gold: 300, stock: ['smoked_herring*8', 'herring*6', 'fish_stew*4', 'rum*6', 'bread*4', 'cheese*3', 'potion_health_light*2', 'potion_fatigue*2', 'lockpick*5', 'iron_arrow*20'] },
   wizard: { gold: 500, stock: ['potion_magicka*6', 'potion_health*2', 'welkynd_stone', 'blue_flower*6', 'ladys_smock*4', 'nirnroot', 'ring_of_the_wizard', 'candelabra', 'magnifying_lens', 'ships_compass'] },
 };

@@ -214,6 +214,17 @@ export function applyHit(target, hit) {
   if (target.shieldPct) amount *= 1 - target.shieldPct / 100;
   if (hit.element === 'frost') target.slowT = 3;
   if (target.def?.undead && hit.element === 'fire') amount *= 1.25;
+  // Sunbolt: white fire, doubly bitter to the dead
+  if (target.def?.undead && hit.spell?.undeadBonus) amount *= hit.spell.undeadBonus;
+  // the Founders' Ember: the dead hate its light
+  if (target.def?.undead && attacker?.isPlayer && attacker.torchLit && ITEMS[attacker.equipped.shield]?.lightStyle === 'founder') amount *= 1.25;
+  // the Founders' Ward: the dead that strike you are burned
+  if (target.isPlayer && target.effects?.wardT > 0 && attacker?.def?.undead && !attacker.dead && hit.kind === 'melee') {
+    setTimeout(() => applyHit(attacker, { amount: 10, attacker: target, kind: 'spell', element: 'fire' }), 0);
+    game.particles.burst(attacker.center(new THREE.Vector3()), 'magic', 10, 0xffe8b0);
+  }
+  // the Hollow King, while his ward-pillars stand
+  if (target.def?.pillarWarded && game.hollowShielded?.()) amount *= 0.5;
   if (target.def?.daedra && hit.element === 'fire') amount *= 0.6;
 
   amount = Math.max(hit.blocked ? 0 : 1, Math.round(amount));
@@ -348,11 +359,11 @@ export class Projectiles {
       for (const c of allTargets()) {
         if (c === p.owner) continue;
         const d = c.center ? c.center(new THREE.Vector3()).distanceTo(at) : c.pos.distanceTo(at);
-        if (d < sp.radius) applyHit(c, { amount: p.damage * (1 - d / sp.radius * 0.6), attacker: p.owner, kind: 'spell', element: sp.element });
+        if (d < sp.radius) applyHit(c, { amount: p.damage * (1 - d / sp.radius * 0.6), attacker: p.owner, kind: 'spell', element: sp.element, spell: sp });
       }
     } else {
       game.playAt(sp.element === 'shock' ? 'shockCast' : sp.element === 'frost' ? 'frostCast' : 'explode', at, 0.6);
-      if (target) applyHit(target, { amount: p.damage, attacker: p.owner, kind: 'spell', element: sp.element });
+      if (target) applyHit(target, { amount: p.damage, attacker: p.owner, kind: 'spell', element: sp.element, spell: sp });
     }
   }
 }

@@ -77,6 +77,17 @@ describe('data integrity', () => {
     expect(INSULTS).toHaveLength(5);
     for (const x of INSULTS) expect(['odette', 'jzhirr', 'lap']).toContain(x.from);
   });
+  it('the Hollow King questline is complete and its pieces exist', () => {
+    for (const q of ['sq_mg1', 'sq_mg2', 'sq_mg3', 'sq_mg4', 'sq_mg5']) expect(Object.values(QUESTS[q].stages).some((st) => st.done), q).toBe(true);
+    for (const id of ['ward_token', 'guild_supplies', 'guild_study_key', 'guild_charter', 'bastien_letter', 'bastien_notes', 'bastien_receipt', 'ashgrave_heart', 'corve_journal', 'founders_ember', 'hollow_crown', 'ashgrave_grimoire', 'frost_ward']) expect(ITEMS[id], id).toBeTruthy();
+    expect(ITEMS.founders_ember.lightStyle).toBe('founder');
+    for (const id of ['ashgrave_heart', 'ashgrave_grimoire', 'frost_ward']) expect(ITEMS[id].onUse, id).toBeTruthy();
+    for (const id of ['ondine', 'merle', 'bastien', 'bastien_home', 'hollow_king']) expect(DIALOGUE[NPCS.find((n) => n.id === id)?.dialogue], id).toBeTruthy();
+    for (const t of ['hollow_thrall', 'bone_knight', 'bone_knight_summon', 'heartwarden']) expect(TEMPLATES[t]?.undead, t).toBe(true);
+    for (const id of ['sunbolt', 'summon_bone_knight']) expect(SPELLS[id], id).toBeTruthy();
+    expect(TEMPLATES[SPELLS.summon_bone_knight.creature]).toBeTruthy();
+    expect(NPCS.find((n) => n.id === 'hollow_king')).toMatchObject({ undead: true, pillarWarded: true });
+  });
   it('pets can never die', () => {
     for (const t of ['dog', 'kitten']) expect(TEMPLATES[t].essential, t).toBe(true);
   });

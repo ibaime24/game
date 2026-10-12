@@ -861,6 +861,25 @@ export function buildHat(kind, s = 0.12) {
   const g = new THREE.Group();
   const felt = hatMat(kind === 'bicorne' ? 0x1a1c2a : 0x1c1a18);
   const gold = hatMat(0xd8a830, { rough: 0.4, metal: 0.7 });
+  if (kind === 'crown') {
+    // a crown of black ice: a circlet with a ring of jagged spikes, lit faintly blue from within
+    const ice = hatMat(0x1a2440, { rough: 0.15, metal: 0.3, emissive: 0x1a3a7a });
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.98, s * 1.02, s * 0.32, 14, 1, true), ice);
+    band.position.y = s * 0.05;
+    g.add(band);
+    for (let k = 0; k < 9; k++) {
+      const a = (k / 9) * Math.PI * 2, tall = k % 3 === 0 ? 1.15 : 0.7;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(s * 0.16, s * tall, 4), ice);
+      spike.position.set(Math.cos(a) * s * 0.96, s * (0.2 + tall / 2), Math.sin(a) * s * 0.96);
+      spike.rotation.set(Math.sin(a) * 0.18, 0, -Math.cos(a) * 0.18);
+      g.add(spike);
+    }
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(s * 0.14), hatMat(0x9ad8ff, { rough: 0.1, emissive: 0x4aa8ff }));
+    gem.position.set(0, s * 0.12, s * 1.0);
+    g.add(gem);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
   if (kind === 'bicorne') {
     // a half-moon of felt standing on edge, crosswise
     const half = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.5, s * 1.5, s * 0.35, 18, 1, false, 0, Math.PI), felt);

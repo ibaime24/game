@@ -47,6 +47,11 @@ Coordinates are overworld metres: north is −Z and east is +X. Chorrol is at (�
 | `sq_cat3` | The Fog Comes In | The Admiral, part 3 (night raid, dungeon) | Captain Gallowglass | 25–35 min | `sq_cat4` |
 | `sq_cat4` | The Dread Meringue | The Admiral, part 4 (ghost ship, three endings) | Captain Gallowglass | 25–35 min | `sq_cat5` |
 | `sq_cat5` | Naming Night | The Admiral, part 5 (festival) | The Admiral bolting | 10–15 min | A kitten, Purrsuit |
+| `sq_mg1` | The Sealed Hall | The Hollow King, part 1 (Mages Guild) | Teekeeus (Chorrol square) | 20–30 min | `sq_mg2` |
+| `sq_mg2` | Starfall | The Hollow King, part 2 | Magister Ondine Vell | 20–30 min | `sq_mg3` |
+| `sq_mg3` | Three Hearts | The Hollow King, part 3 (any order) | Magister Ondine Vell | 35–45 min | `sq_mg4` |
+| `sq_mg4` | The Hollow Road | The Hollow King, part 4 (gate rite, dungeon, choice) | Magister Ondine Vell | 25–35 min | `sq_mg5` |
+| `sq_mg5` | The Hollow King | The Hollow King, part 5 (boss) | The throne doors | 15–20 min | Magister of the Chorrol Chapter |
 
 The QuestLog only moves forward: `set(q, stage)` ignores any stage at or below the current one. A stage marked `done` completes the quest.
 
@@ -631,6 +636,163 @@ Everyone shares the topics *The Greenheart* and *The Green Pact*. Deer, does and
 **Pets** (`PETS` in `game.js`: the dog from `sq_pup`, the kitten from `sq_cat5`):
 - **Immortal:** `essential`, so a killing blow only knocks them down; they regain health steadily, and `tickPets` stands them straight back up if anything ever does mark them dead.
 - **Everywhere you go:** a following pet is carried through every door, into every cell (the overworld, interiors, the Greenheart, the cove, the *Meringue*, Oblivion), on fast travel, and is rebuilt from flags when you load a save. A pet told to *Stay here* waits in that cell, at that spot, across saves.
+
+### The Hollow King — the Mages Guild questline (five quests, about 2–2½ hours)
+
+**Premise:**
+- **The sealed hall:** the Chorrol Mages Guild has been shut for nine days. Its door is sealed with a shimmering ward (the `locked` door in `structures.js` already says so), and Teekeeus does the Guild's business in the square because nobody else can get in or out. The official story is "a scrying accident".
+- **The truth:** the chapter keeps the **Founders' Pool**, a scrying basin built into the hall's floor. Nine days ago, during the Oblivion crisis, the pool froze solid in a heartbeat, and the face of a crowned skeleton looked up out of the ice at the apprentice on watch. Guild-Magister **Ondine Vell** sealed the hall with everyone inside, in case whatever looked out could also look *in*.
+- **The villain:** **Severin Ashgrave**, the First Magister of the Chorrol chapter, four hundred years dead. In 2E 270 he bound his soul into three **Hearts**, black ice in silver cages, and became a lich. His own chapter found out, and three of its founders sealed him alive-in-death under the Jerall Mountains, in the halls he had dug for himself. They couldn't destroy him, because a lich can't die while his Hearts beat, and they couldn't destroy the Hearts, because only the **Founders' Flame** burns hot enough and they hadn't kindled it yet. So each founder took one Heart and hid it as far from the others as they could.
+  - **Hrolfa Stonevoice**, a Nord battlemage, hid hers in the foundations of a watchtower she was building in the north: the **Rime Spire**.
+  - **Thalindor of the Greenward**, a Bosmer, hid his in an Ayleid ruin by the Imperial lake: **Vilverin**.
+  - **Ilsabet Corve**, an Imperial, hid hers in a cave under the Jerall that she sealed with a rockfall. Four centuries later a goblin tribe dug into it: **Frostfang Hollow**.
+- **Why now:** the Oblivion Gates thin the world (the same reason Ilvaine's ash-dead could rise). The seal is failing, Ashgrave is awake, and he has found someone to fetch his Hearts for him.
+- **The arc:** get into the sealed hall and re-kindle the Founders' Flame; follow a missing apprentice to a ruined observatory in the snow; race the lich's servants to the three Hearts; go down into the mountain with the Magister; and end the Hollow King on his throne.
+
+**Places:**
+- **The Chorrol Mages Guild** (interior `mages_guild`, the existing locked door at Chorrol (C.x + 15, C.z + 48)): a two-room hall. The **Founders' Pool** sits in the middle of the floor, a basin of black ice (`U`-style set piece). Round it stand three **Warding Lamps** (`v`, cold braziers, reused from the Rime Spire), plus a library, a study and the apprentices' cots. The door stays locked (`requireFlag: guildWardToken` on a second door interactable) until `sq_mg1` 10.
+- **Starfall Observatory** (world site `starfall`, about (40, −640), on a high shoulder of the Jerall north of Snikkit's Den; interior `starfall_observatory`):
+  - **Outside:** a squat Guild tower with a cracked bronze dome and a telescope pointed at nothing, reached by an old switchback road from the Wintersmeet track.
+  - **Inside:** two floors. The cracked **Seal-Orrery** (a big welkynd orrery, the `q` piece from Quillwhistle's Spire, scaled up and frosted) is on the upper floor. `ashgrave` spawn list.
+- **The three hiding places** (existing cells; each Heart is placed by script when its stage begins):
+  - **Rime Spire** (`rime_spire`): under a flagstone (`heartstone` interactable) beside the frost cage, which Cassius once felt "humming cold through the floor".
+  - **Vilverin** (`vilverin`): in a sealed niche behind the locked iron gate's chamber, with Thalindor's glyph on it.
+  - **Frostfang Hollow** (`frostfang_hollow`, the goblin camp): gone already. Bastien traded the goblins a sack of sweetrolls for it (see `sq_mg3`).
+- **The Hollow Gate** (world site `hollow_gate`, about (330, −640), at the foot of the north-east Jerall, beyond Frostfang Hollow): a great door of black ice set into a cliff, carved with three founders holding three hearts. It opens only to the Founders' Ember and the Magister's rite.
+- **The Hollow Halls** (three linked interiors, going down):
+  1. `hollow_gate_hall`: the frozen antechamber, the old founders' camp (bones and a journal) and the first thralls.
+  2. `bone_stair`: a long descending dungeon of ossuary niches and frozen waterfalls. Bastien is here.
+  3. `ashgrave_throne`: a vast round hall under the mountain, with a throne of black ice on a dais, three pillars of blue welkynd light, and a ring of founders' wards in the floor.
+
+**People:**
+- **Teekeeus** (`teekeeus`, existing, Chorrol square): the Argonian spell merchant, stuck outside the hall. He is the hook. *"Teekeeus is a member of the Guild. Teekeeus is also a member of the street, apparently."*
+- **Guild-Magister Ondine Vell** (`ondine`, `mages_guild` slot 1): a Breton in her sixties, dry, exhausted, holding the ward up for nine days on tea and stubbornness. She is your guide; in `sq_mg4`–`sq_mg5` she comes with you as a follower (`flags.ondineFollowing`, essential, a caster with Frostbite and Heal).
+- **Apprentice Bastien Lorne** (`bastien`): a gifted Imperial apprentice, eighteen, who was on watch when the pool froze. Ashgrave spoke to him through the ice and offered him what every apprentice wants: to never stop learning. He slipped out of the hall before the ward closed and has been fetching his new master's Hearts ever since. The Guild thinks he was taken.
+- **Apprentice Merle Hask** (`merle`, `mages_guild` slot 2): Bastien's friend, a nervous Nord alchemist. She gives you the letter from Bastien's mother (`bastien_letter`), which matters at the end.
+- **Aldous Quillwhistle** (`aldous`, existing, Quillwhistle's Spire): expelled from the Chorrol chapter forty years ago "for frivolity". He can read Ashgrave's cipher, and is delighted to be asked. (Comic relief, and a tie-in to *The Libram of Lesser Wonders*.)
+- **Cassius Frey** (`cassius_home`, existing, only if spared in *The White Hare*): tells you about the cold under the Rime Spire's floor and gives a frost-ward potion. If he's dead, his journal entry says the same.
+- **Chief Gorbag Skullsnow** (existing, Frostfang Hollow): if the Frostfang are friendly, he cheerfully tells you he sold "the cold shiny rock" to "a sad human boy" for sweetrolls. If they're hostile, his hut holds Bastien's receipt.
+- **Severin Ashgrave, the Hollow King** (`hollow_king`, `ashgrave_throne` slot 1): a tall lich in rotted magister's robes, with a crown of black ice and blue fire in his eyes. He talks, and he is courteous and patient, every bit the scholar he was. `ai: 'caster'`; 500 health; Frostbite, Shock Bolt, Fireball.
+- **Creatures (leveled list `ashgrave`):**
+  - **Ashgrave Thralls** (`hollow_thrall`): frost-rimed skeletons in tattered Guild robes;
+  - **Bone Knights** (`bone_knight`): skeleton champions in black-iron armour;
+  - **Frost Wraiths** (the existing `ice_wraith`);
+  - **Heartwardens** (`heartwarden`): one tough thrall that rises beside each Heart when you take it.
+
+**1. `sq_mg1` — The Sealed Hall** (20–30 minutes)
+1. **10:** Teekeeus, *The Guild hall*: it has been sealed nine days, he hears knocking on the window shutters at night, and the Magister slipped a note under the door asking for "someone who can be trusted with fire". He gives you a **Ward-Token** (`ward_token`, a sigil that lets one person through the ward) and a crate of supplies to carry in (`guild_supplies`).
+2. **20:** entering the hall. It is freezing inside: frost on the books, the pool a disc of black ice, and the apprentices wrapped in blankets. Ondine, *The pool*: what Bastien saw, and that he is missing (gone before the ward closed; she assumes taken). The three **Warding Lamps** round the pool have gone out and won't relight from an ordinary flame.
+3. **30:** Merle, *The lamps*: the lamps were lit from the **Founders' Flame**, which "lives in the stone". The founders' rite is written in the *Charter of the Chorrol Chapter*, which is in the locked study (`lock` level 2, key from Ondine, or pick it).
+4. **40:** reading the **Charter** (`guild_charter`, a book): kindle the lamps in the founders' order, *sun, moon, star* (east, west, north lamp), each with a flame you made yourself (a lit torch or a Flare spell, like the Rime Spire braziers). Wrong order: the lamps gutter and go out, and a cold gust knocks you down for 10 damage. Retry any time.
+5. **50:** all three lamps lit in order (`flags.mgLamps`). The ice on the pool cracks and steams, and a blue-white flame stands up out of it: the **Founders' Flame**. In it, for a moment, you see a crowned skeleton look up, *and look at you*.
+6. **100:** Ondine, *The Founders' Flame*: she tells you who Severin Ashgrave was, what the Hearts are, and that only this flame can break them. She draws an ember of it into a lantern and gives it to you: the **Founders' Ember** (`founders_ember`, a lantern-style light that burns blue-white and never goes out, `lightStyle: 'founder'`). She makes you an **Associate** of the Guild (`flags.mgMember`; guild beds and the hall's library are yours to use), and asks you to find Bastien, who was obsessed with the old **Starfall Observatory** in the mountains, "where the Guild used to watch the seal". The ward comes down (`flags.guildOpen`): the hall door opens to everyone from now on.
+
+**2. `sq_mg2` — Starfall** (20–30 minutes)
+1. **10:** travel to Starfall Observatory (the switchback road climbs from the Wintersmeet track).
+2. **20:** entering the observatory. The thralls in it have been dead a long time; Bastien has not. His bedroll is warm-ish and his things are scattered round the cracked **Seal-Orrery**.
+3. **30:** examining the Seal-Orrery (`sealorrery`): three of its nine spheres are black ice, and a brass dial reads *ASHGRAVE — 3 — UNBROKEN*. The founders built the observatory to watch the Hearts; the black spheres mark where they lie.
+4. **40:** finding **Bastien's Notebook** (`bastien_notes`, on the desk upstairs). Its first pages are careful notes on the seal. In its last pages the handwriting changes, and the notes are written in a cipher of interlocking circles.
+5. **50:** Aldous, *Bastien's notebook* (back in Chorrol, at Quillwhistle's Spire). He is thrilled ("Ashgrave's Sigil-Script! Nobody has used this in four hundred years! Oh, this is *wonderful*, oh, this is *terrible*"). He reads it: *"The Master says: the Spire, the Ruin, the Hollow. Fetch my hearts and I will teach you everything. I will teach you to never stop."*
+6. **100:** Ondine, *Bastien* (or Aldous, if you show him first and he insists on coming to tell her): the realisation that Bastien isn't a captive but a courier. Ondine is hurt and very quiet. Reward: the Guild spell **Sunbolt** (`sunbolt`, Destruction: a bolt of white fire, 30 damage, ×2 against undead). Starts `sq_mg3`.
+
+**3. `sq_mg3` — Three Hearts** (35–45 minutes; the three can be done in any order, stages 20 / 30 / 40 at one, two, three Hearts accounted for, `mgHeartStage`)
+- **How to break a Heart:** use it (from the inventory, `usable`) while the **Founders' Ember** is lit in your hand. The Heart shrieks, cracks, and dies (`flags.heartRime` / `heartVilverin`). With the Ember out, the Heart only hums: *"You need fire older than the cold."*
+- **The Rime Spire's Heart:**
+  - If Cassius lives, Cassius, *Ashgrave's Heart*: *"There was always a cold under that floor that wasn't mine. I thought it was guilt."* He gives you two **Frost Ward** potions.
+  - In the spire's top chamber, a flagstone by the cage now has a founder's rune on it (`heartstone`, `requireFlag: mgHearts`). Use it to lift out the **Heart of Ashgrave** (`ashgrave_heart`).
+  - A **Heartwarden** and two Frost Wraiths rise out of the floor at once.
+- **Vilverin's Heart:**
+  - Behind the iron gate (the existing `vilverin_key` lock), a niche in the wall shows Thalindor's oak-leaf glyph (`heartniche`). Lighting the Founders' Ember near it (within 4 m) makes the glyph shine and the stone slide back.
+  - A Heartwarden and two Thralls appear out of the niche.
+- **Frostfang Hollow's Heart:**
+  - **If the Frostfang are friendly:** Gorbag, *The cold shiny rock*. He's sorry, and he isn't. *"Sad human boy. Gave Gorbag forty sweetrolls. FORTY. Gorbag is not made of stone."* He gives you **Bastien's Receipt** (a sweetroll-stained IOU with Bastien's signature) and points you north-east.
+  - **If they are hostile or dead:** the receipt is on Gorbag's body (added to his `extraLoot`).
+  - Either way, the Heart is gone, and this "counts" as accounting for it (`flags.heartFrostfang`).
+- **100:** Ondine, *The Hearts*. Two are broken, and the third is with Bastien, on his way to his master. She knows the founders' rite to open the **Hollow Gate**, and she's coming with you. *"I made that boy an apprentice. I'll bring him home or I'll bury him myself."* Starts `sq_mg4`.
+
+**4. `sq_mg4` — The Hollow Road** (25–35 minutes)
+1. **10:** Ondine joins you as a follower (`flags.ondineFollowing`). Travel to the Hollow Gate in the north-east foothills; Thralls and Frost Wraiths walk the snow round it.
+2. **20:** at the gate, Ondine, *The founders' rite*. She speaks the rite while you hold up the lit Founders' Ember for 20 seconds (a short scripted scene, like the Lightwatch: ice cracking, the three carved founders lighting up one by one). Thralls attack in two small waves while it runs, and Ondine can't fight during the rite. The gate opens (`flags.hollowGateOpen`).
+3. **30:** the antechamber (`hollow_gate_hall`): the founders' old camp, and **Ilsabet Corve's Last Entry** (`corve_journal`). They sealed the door from outside after they hid the Hearts: *"Hrolfa says it is cruel to leave him awake in the dark. I say it is cruel to let him out. We are both right."*
+4. **40:** halfway down the **Bone Stair** (`bone_stair`) you find Bastien on a landing, kneeling by a brazier of blue cold-fire, gaunt and shaking, the third Heart in his hands. He has been ordered to wait for you.
+5. **The choice:**
+   - ***Talk him down:*** show him **his mother's letter** (from Merle, `sq_mg1`), or Speechcraft 50+, or Ondine present and unhurt plus Speechcraft 30+. *"She… she still writes. Every week. I stopped opening them."* He gives you the Heart, and you break it with the Ember on the spot. He joins you to the end (`flags.bastienSaved`; an essential follower who casts Frostbite).
+   - ***Make him an offer of his own:*** *"Come with us and learn something real."* Needs `flags.mgMember` and a Speechcraft or disposition check (40+ / 60+). The same outcome as above, but he keeps the Heart: he wants to break it himself, in front of his master.
+   - ***Fight him:*** he's an apprentice with a lich's gifts: Frostbite, Shock Bolt, 160 health, two summoned Thralls. If he dies he drops the Heart (`flags.bastienDead`), and Ondine says nothing for the rest of the descent.
+   - **However it goes:** if the Heart is in your hands it gets broken, here or at the throne. If Bastien kept it (the second option), he breaks it at the throne at the start of the fight.
+6. **100:** at the bottom of the stair, the throne-room doors (`openFlag: hollowThroneOpen`, opened by the Ember). Starts `sq_mg5`.
+
+**5. `sq_mg5` — The Hollow King** (15–20 minutes)
+1. **10:** entering the throne hall. Ashgrave is seated. He talks first; he is never in a hurry.
+   - *The Guild:* *"I built your chapter. I chose its stone. I lit its first lamp. Ask your Magister whose name is under the floor of her pool."* (It is his.)
+   - *Bastien* (if saved): *"You have taken my apprentice. A pity. He listened so beautifully."*
+   - *Why:* *"Because a mind is the only thing in the world worth keeping, and the world insists on throwing them away."*
+   - **Offer:** he offers you what he offered Bastien. Accepting is a trap: the dialogue ends in a curse (a Silence for 30 s, no casting) and the fight begins anyway, with him taunting you. There is no evil ending; this is Oblivion's Mages Guild, not Skyrim's.
+2. **20:** the fight (`hollowKingFights`):
+   - **Phase one (100%–60%):** he duels from the dais: Frostbite, Shock Bolt and Fireball, and a ring of frost every 12 s that slows anyone within 5 m. The three welkynd pillars shield him (`shieldPillars`). While any pillar stands he takes half damage. Each pillar is an interactable you shatter with a Sunbolt, a power attack, or the Ember (use it within 2 m). Ondine calls this out after his first ward flare.
+   - **Phase two (60%–0%):** he rises and floats, summons two Bone Knights at 60% and two more at 30%, and teleports between the pillar bases every 15 s.
+   - **The last Heart:** if it is still unbroken (that is, Bastien kept it), Bastien breaks it in a blue flash at the start of phase two, and Ashgrave screams. If the Heart is somehow still whole, Ashgrave can't die: at 0 health he kneels, re-forms over 5 seconds (`reforming`, with a *Shatter the crown* interactable while he kneels) and stands again at half health. Using the lit Ember on him while he kneels ends it. This is the fallback for any route that left the Heart intact.
+3. **30:** Ashgrave falls. His crown cracks down the middle, the blue fire goes out of his eyes, and the whole mountain sighs. The ice in the hall begins, very slowly, to melt (`flags.ashgraveDead`).
+4. **100:** take the **Crown of the Hollow King** from the throne steps. Return to Chorrol (the Ember lights you a way out through a side door straight onto the slope outside the Hollow Gate). Ondine, *It's over*, back at the hall:
+   - the Founders' Pool has thawed and shows only the sky;
+   - you are named **Magister** of the Chorrol chapter (`flags.mgMagister`), and the Magister's study is yours (a bed, a safe chest `magister_chest` that never resets);
+   - 500 gold;
+   - **Ashgrave's Grimoire** (`ashgrave_grimoire`), which teaches **Summon Bone Knight** (Conjuration, a Bone Knight that fights for you for 45 s).
+   - **If Bastien was saved:** he is in the hall as a sheepish apprentice again (`bastien_home`), and has written his mother. **If not:** Merle keeps his desk exactly as he left it, and says so.
+
+**Rewards:**
+- **The Founders' Ember** (`founders_ember`): a lantern that burns blue-white, never goes out, works in water, and (beyond the questline) makes undead within 6 m take 25% more damage from you.
+- **Sunbolt** (`sunbolt`): a white-fire bolt for 22 magicka, 30 damage, doubled against the undead.
+- **Crown of the Hollow King** (`hollow_crown`, head, cloth): +50 Magicka, −15 Health. *"It is very cold, and it is very quiet inside your head while you wear it."*
+- **Summon Bone Knight** (from Ashgrave's Grimoire).
+- **The Guild spell table** (Merle, `merchant: 'guild'`, opens to Associates; `GUILD_SPELLS` in `spells.js`, effects in `spellbook.js`):
+  - **Starfall** (Destruction 25, 60 magicka): seven stars fall one after another round where you aim, shock 22 in 3 m each.
+  - **Founders' Light** (Restoration, 30): a blue-white orb circles you for 60 s, lighting the dark and burning undead within 6 m for 8 a second.
+  - **Hollow Step** (Alteration, 26): step up to 18 m through the cold; frost bursts where you leave and land (15, slow).
+  - **Founders' Ward** (Alteration, 40): Shield 50% for 20 s with the sun, moon and star circling you; undead that hit you are burned for 10.
+  - **Ring of Rime** (Destruction, 50; Magister only): a ring of frost rolls out to 14 m, frost 30 with slow and stagger on everything it passes.
+- **Guild rank:** Associate (`sq_mg1`), then Magister (`sq_mg5`). The hall's library, beds and spell shop are open to members, and the Magister gets the study and its safe chest.
+- `QUEST_GOLD` for each of the five quests.
+
+**New items:**
+- **Quest items:** `ward_token`, `guild_supplies`, `guild_charter`, `bastien_letter`, `bastien_notes`, `bastien_receipt`, `ashgrave_heart`, `corve_journal`.
+- **Rewards:** `founders_ember`, `hollow_crown`, `ashgrave_grimoire`.
+- **Potions:** `frost_ward` (Shield 30%, 60 s).
+
+**New templates:** `hollow_thrall`, `bone_knight`, `heartwarden`, `hollow_king`; plus NPCs `ondine`, `merle`, `bastien`, `bastien_home`. **Leveled list:** `ashgrave`. **New spells:** `sunbolt`, `summon_bone_knight`.
+
+**Flags:** `guildWardToken`, `mgLamps`, `mgLampOrder`, `mgMember`, `guildOpen`, `mgHearts`, `heartRime`, `heartVilverin`, `heartFrostfang`, `ondineFollowing`, `hollowGateOpen`, `bastienSaved`, `bastienKeepsHeart`, `bastienDead`, `hollowThroneOpen`, `ashgraveDead`, `mgMagister`.
+
+**As built** (`src/guild.js`, mixed into `game`; places in `src/world/hollowking.js` and `interiors.js`):
+- **The ward:** the Guild door (`guildDoor`) is blocked until you carry the Ward-Token; it opens for everyone once `flags.guildOpen`.
+- **The lamps:** lighting one out of order douses all of them, costs 10 health and knocks you back from the pool. Any flame of your own counts: a lit torch or lantern in your hand, or a Flare (9 magicka). Lighting the third wakes the Flame even if you never read the Charter.
+- **Hearts:** the Rime Spire's flagstone and Vilverin's niche only appear once `flags.mgHearts` is set (at the end of `sq_mg2`); Vilverin's niche needs the Ember lit. Each raises a Heartwarden with two wraiths or thralls. Breaking a Heart is `useAshgraveHeart` (the item's `onUse`). If the Frostfang are hostile, the receipt is on Gorbag's body (`extraLoot`).
+- **Bastien's choices:** *Give him his mother's letter* always works; *Come home, Bastien* needs Speechcraft 50+, or 30+ with Ondine beside you (one try); *Come with us and learn something real* needs Guild membership and Speechcraft 40+ or disposition 60+ (one try), and he keeps the Heart; *Then I'll take it from you* is the fight. Saved, he follows you (`flags.bastienFollowing`, essential) to the throne.
+- **The fight:** while any ward-pillar stands he takes half damage (`pillarWarded`, `hollowShielded`). Shatter a pillar by using it with the Ember lit, or by spending a Sunbolt's 22 magicka on it point-blank. A frost ring every 12 s hurts anyone within 5 m. At 60% he summons two Bone Knights (and, if Bastien kept the Heart, Bastien breaks it); at 30%, two more; from 60% on he teleports between the pillars every 15 s. If his last Heart still beats when he falls (`preventDeath`), he kneels for 6 s and rises at half health until you break it from your pack. Accepting his offer (*Teach me*) silences you for 30 s, and the fight begins anyway.
+- **Afterwards:** a crack of daylight opens in the hall (an exit straight out to the Gate); the crown lies on the dais steps; Ondine and Bastien go home ahead of you as you leave; if Bastien was saved he is back in the hall (`bastien_home`).
+
+**What's new in code, and what is reused:**
+- **Reused as-is:**
+  - cold braziers lit with fire (the Warding Lamps, with an order check added);
+  - lantern lights (`lightStyle` with a new `founder` style, beside `lantern` and `ghost`);
+  - followers that rebuild on load (Ondine and Bastien, like the Captain);
+  - interiors built from ASCII maps, leveled spawn lists, unique bosses, `openFlag` doors;
+  - scripted scenes on a timeline (the gate rite, like the Lightwatch);
+  - Speechcraft and disposition checks, items that start or advance stages on pickup;
+  - the existing Rime Spire, Vilverin, Frostfang Hollow, Gorbag, Cassius and Aldous.
+- **New, each small:**
+  1. **The lamp-order puzzle:** three braziers that must be lit in sequence (`mgLampOrder`).
+  2. **Usable quest items** that check for a lit Ember (breaking a Heart).
+  3. **Shield pillars:** three interactable crystals; while any stands, the boss takes half damage.
+  4. **`undying` bosses:** at 0 health, while a flag is unset, they kneel and re-form instead of dying, with a timed interactable.
+  5. **A Silence effect** (no casting for N seconds) for the false offer.
+  6. **The founder light style:** a blue-white flame, plus the undead damage bonus.
+- **Biggest asset jobs:**
+  - the Mages Guild interior with its pool;
+  - the Starfall Observatory, outside and in;
+  - the Hollow Gate's carved ice door;
+  - the three Hollow interiors, the throne hall above all;
+  - the lich model: a scaled skeleton in a robe with a black-ice crown (a new `crown` hat kind beside `tricorn` and `bicorne`).
 
 ---
 

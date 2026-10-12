@@ -529,6 +529,31 @@ export function portalMaterial(colorA = 0xff6010, colorB = 0x400000) {
 }
 
 // ------------------------------------------------------------------ the world
+/** The ward over the Mages Guild's door: rings of sigils in additive blue light (hidden by game.js once it falls). */
+function guildWard(x, y, z) {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 256;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(64, 128, 6, 64, 128, 120);
+  grd.addColorStop(0, 'rgba(200,225,255,0.55)'); grd.addColorStop(0.6, 'rgba(110,160,255,0.22)'); grd.addColorStop(1, 'rgba(60,100,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 256);
+  g.strokeStyle = 'rgba(220,235,255,0.9)'; g.lineWidth = 2;
+  for (const r of [26, 44]) { g.beginPath(); g.arc(64, 128, r, 0, Math.PI * 2); g.stroke(); }
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    g.save(); g.translate(64 + Math.cos(a) * 35, 128 + Math.sin(a) * 35); g.rotate(a);
+    g.beginPath(); g.moveTo(-3, -4); g.lineTo(3, 0); g.lineTo(-3, 4); g.stroke(); g.restore();
+  }
+  g.beginPath(); g.moveTo(64, 104); g.lineTo(84, 128); g.lineTo(64, 152); g.lineTo(44, 128); g.closePath(); g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const pane = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  pane.position.set(x, y, z);
+  pane.renderOrder = 6;
+  pane.userData.dynamic = true;
+  return pane;
+}
+
 export function buildWorldStructures(b, terrain, state) {
   const H = (x, z) => terrain.heightAt(x, z);
 
@@ -735,7 +760,10 @@ export function buildWorldStructures(b, terrain, state) {
     house(b, C.x - 44, C.z + 6, h0, 10, 8, PI / 2, { decor: { flowers: true, smoke: true, balcony: false, dormer: false }, name: "Laythe Wavrick's House", door: { kind: 'door', name: "Laythe Wavrick's House", locked: true, lockLevel: 2 } });
     house(b, C.x + 42, C.z + 44, h0, 10, 8, -PI / 2, { decor: { flowers: true, smoke: true, balcony: true, dormer: false }, name: "Valus Odiil's House", door: { kind: 'door', name: "Valus Odiil's House", locked: true, lockLevel: 4 } });
     house(b, C.x - 44, C.z + 44, h0, 12, 9, PI / 2, { decor: { flowers: true, smoke: true, balcony: false, dormer: false }, name: 'Fighters Guild', sign: 'Fighters Guild', door: { kind: 'door', name: 'Fighters Guild', locked: true, lockMsg: 'A note on the door reads: "Closed. Gone to Kvatch to fight the Daedra. — Modryn Oreyn"' } });
-    house(b, C.x + 15, C.z + 48, h0, 10, 8, PI, { decor: { flowers: true, smoke: true, balcony: false, dormer: true }, name: 'Mages Guild', sign: 'Mages Guild', door: { kind: 'door', name: 'Mages Guild', locked: true, lockMsg: 'The door is sealed with a shimmering ward. Teekeeus handles the Guild\'s business in the square.' } });
+    house(b, C.x + 15, C.z + 48, h0, 10, 8, PI, { decor: { flowers: true, smoke: true, balcony: false, dormer: true }, name: 'Mages Guild', sign: 'Mages Guild', door: { kind: 'door', cell: 'mages_guild', name: 'Mages Guild', guildDoor: true } });
+    // the ward the Magister has held over the Guild's door for nine days: a pane of shimmering blue sigils
+    state.guildWard = guildWard(C.x + 15, h0 + 1.3, C.z + 48 - 4.32);
+    b.add(state.guildWard);
     house(b, C.x + 44, C.z + 4, h0, 9, 8, -PI / 2, { decor: { flowers: true, smoke: true, balcony: false, dormer: false }, name: "Glarthir's House", door: { kind: 'door', name: "Glarthir's House", locked: true, lockLevel: 5 } });
     chapel(b, C.x + 32, C.z - 22, h0, -PI / 2, 'Chapel of Stendarr');
     // Castle Chorrol (north)

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  createCharacter, exerciseSkill, canLevelUp, applyLevelUp, attributeBonus, skillXpNeeded,
+  createCharacter, exerciseSkill, canLevelUp, applyLevelUp, attributeBonus, skillXpNeeded, levelNeeded, LEVEL_ATTR_GAIN,
   weaponDamage, armorMultiplier, blockReduction, spellCost, priceMultiplier, detectChance,
   maxMagicka, baseHealth, RACES, CLASSES, BIRTHSIGNS, SKILL_IDS, ATTRIBUTES,
 } from '../src/data/stats.js';
@@ -52,37 +52,37 @@ describe('skill progression and leveling', () => {
     expect(ch.attrIncreases.strength).toBe(1);
   });
 
-  it('minor skills do not advance the level', () => {
+  it('every skill counts toward the next level, minor ones too', () => {
     const ch = createCharacter({ race: 'imperial', cls: 'warrior', sign: 'warrior' });
-    exerciseSkill(ch, 'alchemy', 100);
-    expect(ch.skills.alchemy).toBeGreaterThan(5);
-    expect(ch.levelProgress).toBe(0);
+    exerciseSkill(ch, 'alchemy', skillXpNeeded(ch, 'alchemy'));
+    expect(ch.levelProgress).toBe(1);
   });
 
-  it('signals readiness after ten major increases and levels up', () => {
+  it('signals readiness after enough skill increases, and levels one chosen attribute', () => {
     const ch = createCharacter({ race: 'imperial', cls: 'warrior', sign: 'warrior' });
+    expect(levelNeeded(ch)).toBe(7);
     let ready = false;
     for (let i = 0; i < 200 && !ready; i++) {
-      ready = exerciseSkill(ch, 'blade', skillXpNeeded(ch, 'blade')).some((e) => e.type === 'levelReady');
+      ready = exerciseSkill(ch, i % 2 ? 'blade' : 'alchemy', 100).some((e) => e.type === 'levelReady');
     }
     expect(ready).toBe(true);
     expect(canLevelUp(ch)).toBe(true);
     const str = ch.attrs.strength;
     const hp = baseHealth(ch);
-    const gains = applyLevelUp(ch, ['strength', 'endurance', 'luck']);
+    const gains = applyLevelUp(ch, 'strength');
     expect(ch.level).toBe(2);
-    expect(gains.strength).toBe(5); // ten blade increases -> x5
-    expect(ch.attrs.strength).toBe(str + 5);
-    expect(gains.luck).toBe(1);
-    expect(baseHealth(ch)).toBeGreaterThan(hp);
-    expect(canLevelUp(ch)).toBe(false);
+    expect(gains.strength).toBe(LEVEL_ATTR_GAIN);
+    expect(ch.attrs.strength).toBe(str + LEVEL_ATTR_GAIN);
+    expect(baseHealth(ch)).toBeGreaterThan(hp + 9);
+    expect(levelNeeded(ch)).toBe(9);
   });
 
   it('rejects invalid level-up choices', () => {
     const ch = createCharacter({});
-    expect(() => applyLevelUp(ch, ['strength', 'endurance', 'luck'])).toThrow();
+    expect(() => applyLevelUp(ch, 'strength')).toThrow();
     ch.levelProgress = 10;
-    expect(() => applyLevelUp(ch, ['strength', 'strength', 'luck'])).toThrow();
+    expect(() => applyLevelUp(ch, 'wisdom')).toThrow();
+    expect(() => applyLevelUp(ch, ['strength', 'luck'])).toThrow();
   });
 
   it('uses Oblivion attribute multipliers', () => {

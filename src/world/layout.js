@@ -34,6 +34,8 @@ export const LOCATIONS = {
   skyward_shrine: { name: 'Skyward Shrine', x: -250, z: -603, icon: 'shrine', discovered: false },
   varns_camp: { name: "Varn's Camp", x: -330, z: -540, icon: 'camp', discovered: false },
   rime_spire: { name: 'The Rime Spire', x: -92, z: -636, icon: 'ruin', discovered: false },
+  starfall: { name: 'Starfall Observatory', x: 30, z: -612, icon: 'ruin', discovered: false },
+  hollow_gate: { name: 'The Hollow Gate', x: 325, z: -612, icon: 'ruin', discovered: false },
   smugglers_cut: { name: "The Smugglers' Cut", x: -470, z: 640, icon: 'cave', discovered: false },
 };
 
@@ -123,6 +125,9 @@ export const FLATS = [
   { x: -122, z: -608, r: 3, fall: 9, h: 49.5 },
   { x: -110, z: -619, r: 3, fall: 9, h: 54.5 },
   { x: -470, z: 640, r: 8, fall: 12, h: 15 }, // the Smugglers' Cut, at the foot of the southern mountains
+  // the Hollow King: the Guild's ruined observatory on a shoulder of the Jerall, and the Hollow Gate's apron
+  { x: 30, z: -611, r: 9, fall: 13, h: 37 }, // Starfall Observatory
+  { x: 325, z: -603, r: 11, fall: 12, h: 47 }, // the Hollow Gate's apron, at the foot of the cliff
 ];
 
 export const ROADS = [
@@ -137,7 +142,21 @@ export const ROADS = [
   [[-200, -310], [-206, -380], [-196, -440], [-188, -500], [-182, -520]],
   // the old watch track from Wintersmeet up to the Rime Spire
   [[-166, -568], [-140, -590], [-116, -612], [-100, -626]],
+  // the Guild's old observatory road, past Snikkit's Den and up onto the shoulder at Starfall
+  [[60, -528], [48, -556], [36, -578], [30, -598], [30, -604]],
+  // the founders' track from Frostfang Hollow north-east to the Hollow Gate
+  [[218, -556], [252, -572], [286, -588], [312, -598], [325, -602]],
 ];
+
+// The Hollow King: anchor points round the two world sites (the rest is in world/hollowking.js)
+export const HK = {
+  starfallDoor: { x: 30, z: -606.6 }, // the observatory door, facing south down the road
+  starfallReturn: { x: 30, z: -604.4, yaw: Math.PI }, // just outside it, looking away
+  gateDoor: { x: 325, z: -614.2 }, // the black-ice door in the cliff, facing south
+  gateFront: { x: 325, z: -607.8, yaw: 0 }, // where you stand with the Ember for the rite, facing the door
+  gateReturn: { x: 325, z: -606, yaw: Math.PI }, // just outside the gate, looking away from it
+  gateSpawns: [[313, -600], [337, -600], [318, -592], [332, -592], [307, -607], [343, -606]],
+};
 
 export const BRIDGE = { x0: 8, z0: 252, x1: 172, z1: 258, y: 4.7, width: 6 };
 

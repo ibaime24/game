@@ -18,6 +18,7 @@ import { distToSegment, COVE, shoreZ } from './layout.js';
 const PI = Math.PI, TAU = PI * 2;
 const noise = createNoise2D(5150);
 const noise2 = createNoise2D(919);
+const noise3 = createNoise2D(2718); // the moorland palette: gorse, heather, bracken
 function rng(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 
 // the switchback path from the tunnel ledge down the bank behind town: [x, z, height]
@@ -65,6 +66,8 @@ export function coveHeight(x, z) {
   const r = rim(x, z);
   const mod = 0.8 + 0.45 * fbm(noise2, x / 70 + 3, z / 70, 3);
   let hill = (28 * smoothstep(0.75, 1.4, r) + 16 * smoothstep(1.3, 2.0, r)) * mod;
+  // hummocks and shallow gullies, so the slopes read as moorland rather than smooth lumps
+  hill += (fbm(noise, x / 22 + 9, z / 22, 3) * 2.4 + fbm(noise2, x / 9, z / 9, 2) * 0.5) * smoothstep(0.85, 1.25, r);
   if (z > 8) hill *= lerp(1, 0.62, smoothstep(10, 70, z)) * smoothstep(110, 60, z);
   h += hill;
   // the lighthouse's grassy knoll at the tip of the east headland
@@ -85,12 +88,28 @@ export function coveHeight(x, z) {
 function coveSplat(x, z, h, ny, out) {
   const n = fbm(noise, x / 9, z / 9, 2), m = fbm(noise2, x / 30, z / 30, 2);
   let grass = 0.75 + m * 0.3, dirt = 0.03, rock = 0, sand = 0.25;
-  // sea-meadow green on the hills, going gold on the dunes by the town
-  let tr = 1.0 + n * 0.06, tg = 1.05, tb = 0.85;
-  const dune = smoothstep(9, 4, h);
-  tr += dune * 0.1; tb -= dune * 0.03; sand += dune * 0.2;
-  // bare rock only where the slope is steep
+  // a coastal moor: deep sea-meadow green, with drifts of gorse gold, heather and rusty bracken on the
+  // slopes, all laid down by one slow noise so they come in sweeps rather than speckles
+  const r = rim(x, z);
+  const moor = smoothstep(0.8, 1.1, r);
+  const band = fbm(noise3, x / 26, z / 26, 3) * 0.5 + 0.5; // 0..1, slow
+  const fleck = fbm(noise3, x / 7 + 40, z / 7, 2) * 0.5 + 0.5;
+  let tr = 0.8, tg = 1.0, tb = 0.64;
+  const gorse = smoothstep(0.62, 0.78, band + fleck * 0.15) * moor;
+  const heather = smoothstep(0.42, 0.28, band - fleck * 0.1) * moor * smoothstep(8, 16, h);
+  const bracken = smoothstep(0.5, 0.58, Math.abs(band - 0.5) * 2 + fleck * 0.2 - 0.3) * moor * (1 - gorse) * (1 - heather) * 0.5;
+  tr = lerp(tr, 1.18, gorse); tg = lerp(tg, 1.02, gorse); tb = lerp(tb, 0.42, gorse);
+  tr = lerp(tr, 0.94, heather); tg = lerp(tg, 0.7, heather); tb = lerp(tb, 0.92, heather);
+  tr = lerp(tr, 1.12, bracken); tg = lerp(tg, 0.86, bracken); tb = lerp(tb, 0.5, bracken);
+  tr += n * 0.05; tg += n * 0.04;
+  // the dunes by the town go gold, with the grass thinning to sand
+  const dune = smoothstep(9, 4, h) * (1 - moor);
+  tr += dune * 0.14; tg += dune * 0.02; tb -= dune * 0.02; sand += dune * 0.25;
+  // bare rock where the slope is steep, and all along the sea-foot of the headlands
   rock = smoothstep(0.78, 0.6, ny);
+  rock = Math.max(rock, smoothstep(5.5, 2.4, h) * smoothstep(0.82, 1.05, r) * (1 - smoothstep(0.3, 0.2, Math.abs(ny - 1))));
+  // crumbly earth at the brink of the rock faces
+  dirt += smoothstep(0.86, 0.74, ny) * (1 - rock) * 0.8;
   // pale golden sand, darkening and going faintly green-grey where it's wet, then the sea floor
   sand = Math.max(sand, smoothstep(3.0, 1.6, h)) * (1 - rock);
   if (h < 2.2) { tr = 1.14; tg = 1.06; tb = 0.88; }
@@ -105,7 +124,11 @@ function coveSplat(x, z, h, ny, out) {
   const walk = smoothstep(1.6, 0.6, walkDist(x, z)) * (0.75 + n * 0.25);
   const trod = Math.max(plaza, walk);
   sand += trod * 2.2; dirt += trod * 0.35; grass *= 1 - trod * 0.92;
-  if (trod > 0) { tr = lerp(tr, 1.12, trod); tg = lerp(tg, 1.04, trod); tb = lerp(tb, 0.86, trod); }
+  if (trod > 0) {
+    // trodden sand: warm, with darker damp patches and a scuff of dirt where the feet go
+    const damp = smoothstep(0.55, 0.75, fleck) * 0.18;
+    tr = lerp(tr, 1.1 - damp, trod); tg = lerp(tg, 1.0 - damp, trod); tb = lerp(tb, 0.82 - damp * 0.6, trod);
+  }
   out[0] = tr; out[1] = tg; out[2] = tb;
   out[3] = Math.max(0, grass); out[4] = dirt; out[5] = rock; out[6] = sand; out[7] = 0; out[8] = 0;
 }
@@ -707,15 +730,15 @@ function surfLine(b, H, x0, x1) {
 /** Pines in clumps on the hilltops, and outcrops of rock on the steep faces. */
 function hillsides(b, H, terrain, r) {
   const pines = [];
-  for (let i = 0; i < 400 && pines.length < 70; i++) {
+  for (let i = 0; i < 900 && pines.length < 150; i++) {
     const x = (r() - 0.5) * 290, z = -140 + r() * 200;
     const q = rim(x, z);
-    if (q < 1.25 || z > 50) continue;
+    if (q < 1.15 || z > 60) continue;
     if (Math.abs(x) < 9 && z < -50 && z > -75) continue; // keep the tunnel and the ledge clear
     if (terrain.normalAt(x, z).y < 0.85) continue;
-    // in clumps
-    const n = 2 + Math.floor(r() * 4);
-    for (let k = 0; k < n; k++) pines.push([x + (r() - 0.5) * 9, z + (r() - 0.5) * 9]);
+    // in dark, windswept clumps along the skyline
+    const n = 3 + Math.floor(r() * 5);
+    for (let k = 0; k < n; k++) pines.push([x + (r() - 0.5) * 11, z + (r() - 0.5) * 11]);
   }
   const ref = buildTreeMesh('pine', 1, 23);
   const im = new THREE.InstancedMesh(ref.geometry, ref.material, pines.length);
@@ -724,7 +747,7 @@ function hillsides(b, H, terrain, r) {
     const sc = 0.8 + r() * 0.7;
     m4.compose(p.set(x, H(x, z) - 0.3, z), q.setFromAxisAngle(up, r() * TAU), s.set(sc, sc * (0.85 + r() * 0.35), sc));
     im.setMatrixAt(i, m4);
-    im.setColorAt(i, new THREE.Color().setHSL(0.3 + (r() - 0.5) * 0.05, 0.3, 0.7 + r() * 0.2));
+    im.setColorAt(i, new THREE.Color().setHSL(0.32 + (r() - 0.5) * 0.05, 0.32, 0.5 + r() * 0.22));
   });
   im.castShadow = true; im.receiveShadow = true;
   im.customDepthMaterial = ref.customDepthMaterial;
@@ -1115,14 +1138,17 @@ export function buildCove(b, game) {
       if (nearWalk(x, z)) return false;
       return pathAt(x, z)[0] > 2.2;
     };
-    for (let i = 0; i < 3200; i++) {
+    for (let i = 0; i < 5200; i++) {
       const x = (r() - 0.5) * 290, z = -135 + r() * 185;
       if (!clear(x, z)) continue;
       const h = H(x, z), q = r(), rot = r() * TAU;
       if (h < 0.3) continue;
       const ny = terrain.normalAt(x, z).y;
-      if (h > 2.4 && h < 26 && ny > 0.8) {
-        if (q < 0.55) sc.add('shrub_04', x, h - 0.05, z, { variant: pick('shrub_04'), height: 0.35 + r() * 0.5, rotY: rot, maxDist: 70 });
+      const moor = rim(x, z) > 0.82;
+      if (h > 2.4 && h < 40 && ny > 0.72) {
+        if (moor && q < 0.3) sc.add('shrub_03', x, h - 0.1, z, { variant: pick('shrub_03'), height: 0.9 + r() * 1.1, rotY: rot, maxDist: 130, shadow: true });
+        else if (moor && q < 0.42) sc.add('fern_02', x, h - 0.05, z, { variant: pick('fern_02'), height: 0.7 + r() * 0.6, rotY: rot, maxDist: 80 });
+        else if (q < 0.55) sc.add('shrub_04', x, h - 0.05, z, { variant: pick('shrub_04'), height: 0.35 + r() * 0.5, rotY: rot, maxDist: 70 });
         else if (q < 0.68) sc.add('nettle_plant', x, h - 0.03, z, { variant: pick('nettle_plant'), height: 0.5 + r() * 0.35, rotY: rot, maxDist: 55 });
         else if (q < 0.71) sc.add('shrub_02', x, h - 0.05, z, { variant: pick('shrub_02'), height: 0.8 + r() * 0.6, rotY: rot, maxDist: 100 });
         else if (q < 0.73) sc.add(r() < 0.5 ? 'celandine_01' : 'dandelion_01', x, h - 0.02, z, { variant: pick('celandine_01'), height: 0.3 + r() * 0.2, rotY: rot, maxDist: 45 });

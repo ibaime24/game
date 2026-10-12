@@ -6,6 +6,8 @@
 //  Brinewhistle Cove: m the Captain's armchair  n the Admiral's cushion  o the Captain's sea chest  d a nest of wool
 //  t tide pool  y the lantern rock  N Crumpet's corner  J the Meringue's locked cabin door  I cannon  f mast  W a glow
 //  (a green ghost-lantern, or in the Grotto a clump of glowing weed)
+//  The Hollow King: every letter is taken, so its set pieces sit on punctuation marker cells (MARKS below), which
+//  buildInterior collects into meta.marks for decorateHollowInterior in world/hollowking.js to build on.
 import * as THREE from 'three';
 import { M, boxGeo } from './builder.js';
 import { chest } from './structures.js';
@@ -14,11 +16,13 @@ import { itemMesh } from './itemMesh.js';
 import { mat } from '../actors/models.js';
 import { buildHareMesh } from './hare.js';
 import { ART, WALL_PAINTINGS, paintingUrl } from '../data/art.js';
-import { COVE } from './layout.js';
+import { COVE, HK } from './layout.js';
 import { leatherTex } from './texgen.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const artLoader = new THREE.TextureLoader();
+/** Marker chars: their cells are plain floor, collected into meta.marks[char] = [{ x, z, gx, gz }]. */
+export const MARKS = ['*', '~', '!', '^', '&', '%', '$', '=', '+', '_', '-', '{', '}', '(', ')', '|', '<', '>'];
 const frameMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.45, metalness: 0.55 });
 
 /** A framed canvas hung on a wall. rot: the direction the painting faces. */
@@ -432,7 +436,131 @@ export const INTERIORS = {
     ],
     npcs: { 1: 'brisk' },
   },
+  // ---- The Hollow King (set pieces on marker cells: see world/hollowking.js)
+  // * the Founders' Pool (with its three Warding Lamps)  ^ star charts / banners / frost on the walls
+  // ! the Magister's desk  % her bed  $ her chest  = the study door  & a warm light under the rafters
+  mages_guild: {
+    name: 'The Chorrol Mages Guild', tile: 2, wallH: 5.4, wall: 'plaster@f2eadc', floor: 'floor', ceil: 'timber@e4d6c0', music: 'explore', lightLevel: 0.75,
+    ambient: [0xffdcb4, 0x2a2018, 0.62], fog: [0x140e0a, 12, 48],
+    owner: 'Ondine Vell', exitTo: 'world',
+    map: [
+      '#################',
+      '#SSFSS.S#.^!..(.#',
+      '#..&....#......%#',
+      '#j.....q#$....T(#',
+      '#.......###=#####',
+      '#Q........^...^.#',
+      '#(............T.#',
+      '#Q..2..*......c(#',
+      '#(....&........^#',
+      '#Q...T.c.1...3.(#',
+      '#<.r..c.....r..<#',
+      '#^..(..P..(....^#',
+      '########D########',
+    ],
+    npcs: { 1: 'ondine', 2: 'merle', 3: 'bastien_home' },
+    tableItems: ['potion_magicka', 'book_ayleids', 'magnifying_lens'],
+    tableClutter: ['candlestick', 'brass_goblet', 'clay_jug', 'wooden_bowl', 'candlestick'],
+    tableStyle: 'round', chairStyle: 'chair',
+    wallDecor: ['GothicCommode_01', 'GothicCabinet_01', 'painted_wooden_bench'],
+    topItems: ['candlestick', 'oil_lamp', 'ceramic_vase', 'magnifying_lens', 'ships_compass'],
+    chandeliers: [[-10, -8, 'lantern_chandelier_01'], [-4, 4, 'lantern_chandelier_01'], [8, 8, 'lantern_chandelier_01']],
+  },
+  // * the Seal-Orrery  ~ the shaft of moonlight through the broken dome  ! Bastien's desk  ^ frost  _ snow  + banner
+  starfall_observatory: {
+    name: 'Starfall Observatory', tile: 2.5, wallH: 9, wall: 'whitestone@dfe3ea', floor: 'stone@c8ccd4', ceil: 'whitestone@aab2be', music: 'dungeon', lightLevel: 0.45, dungeon: true,
+    ambient: [0x9ab4e0, 0x1a2234, 0.95], fog: [0x0a1018, 10, 52],
+    exitTo: 'world', exitName: 'The Jerall Mountains', exitAt: HK.starfallReturn, spawnList: 'ashgrave_low',
+    map: [
+      '###############',
+      '#^S...^..S.^..#',
+      '#._.......e.._#',
+      '#<...........<#',
+      '#.............#',
+      '#+.....*.....!#',
+      '#.............#',
+      '#<._.......e.<#',
+      '#x.^...P...._C#',
+      '#######D#######',
+    ],
+  },
+  // ! the founders' camp  ^ black ice on the walls  & cold-fire braziers  > the arch down to the Bone Stair
+  hollow_gate_hall: {
+    name: 'The Hollow Gate', tile: 3, wallH: 8, wall: 'stone@cad4e2', floor: 'stone@b8c2d0', ceil: 'stone@9aa6b8', music: 'dungeon', lightLevel: 0.45, dungeon: true,
+    ambient: [0xa8bcd8, 0x182030, 1.15], fog: [0x0a1020, 10, 48],
+    exitTo: 'world', exitName: 'The Hollow Gate', exitAt: HK.gateReturn, spawnList: 'ashgrave',
+    map: [
+      '#############',
+      '#^...w>w...^#',
+      '#.p.......p.#',
+      '#&..e...e..&#',
+      '#.p.......p.#',
+      '#^...!.....^#',
+      '#.p..e....p.#',
+      '#^....P....^#',
+      '######D######',
+    ],
+  },
+  // ! Bastien's landing  & cold fire  = frozen falls  - worn treads  } the throne doors ({ in front)  ) the last arch
+  bone_stair: {
+    name: 'The Bone Stair', tile: 3, wallH: 8, wall: 'stone@c0cad8', floor: 'stone@b0b8c6', ceil: 'stone@8a96a8', music: 'dungeon', lightLevel: 0.4, dungeon: true,
+    ambient: [0xa4b8d8, 0x182030, 1.35], fog: [0x0c1220, 10, 46],
+    exitTo: 'hollow_gate_hall', exitName: 'Up the Stair', spawnList: 'ashgrave',
+    map: [
+      '###D#################',
+      '#..P.....-.&...e..&.#',
+      '#=.......-..........#',
+      '################.--.#',
+      '################.e..#',
+      '#&..e.....-...&....=#',
+      '#.........-.........#',
+      '#..-.################',
+      '#--e.################',
+      '#=...!&.-...e...&...#',
+      '#.......-...........#',
+      '################.--.#',
+      '#..#############...=#',
+      '#).}{...-..&..e.....#',
+      '#..#....-...........#',
+      '#####################',
+    ],
+  },
+  // * the throne on its dais  + the three Ward-Pillars  & cold fire  % banners  ^ frost  | the crack of daylight
+  ashgrave_throne: {
+    name: 'The Throne of Ashgrave', tile: 4, wallH: 13, wall: 'stone@acbcd4', floor: 'stone@9cacc0', ceil: 'stone@6e7e98', music: 'dungeon', lightLevel: 0.4, dungeon: true,
+    ambient: [0x7494d4, 0x0a1020, 1.05], fog: [0x04070e, 14, 74],
+    exitTo: 'bone_stair', exitName: 'The Bone Stair',
+    map: [
+      '###############',
+      '#%..^..+..^..%#',
+      '#.(.........(.#',
+      '#..+...*...+..#',
+      '#.(....1....(.#',
+      '#.............#',
+      '#.(...&.&...(.#',
+      '#.............#',
+      '#.(...&.&...(.#',
+      '#.............#',
+      '#^....&P&....|#',
+      '#######D#######',
+    ],
+    npcs: { 1: 'hollow_king' },
+  },
 };
+
+/** World position of the first `ch` in interior `id`'s map, stepped `dz` tiles south (in the same frame as buildInterior). */
+function markPos(id, ch, dx = 0, dz = 0) {
+  const def = INTERIORS[id];
+  const rows = def.map, T = def.tile, cols = Math.max(...rows.map((r) => r.length));
+  for (let z = 0; z < rows.length; z++) {
+    const x = rows[z].indexOf(ch);
+    if (x >= 0) return { x: -(cols * T) / 2 + (x + 0.5 + dx) * T, z: -(rows.length * T) / 2 + (z + 0.5 + dz) * T };
+  }
+  return null;
+}
+// back up the Bone Stair you come out in front of the arch you went down; back out of the throne hall, before its doors
+INTERIORS.bone_stair.exitAt = { ...markPos('hollow_gate_hall', '>', 0, 1.2), yaw: Math.PI };
+INTERIORS.ashgrave_throne.exitAt = { ...markPos('bone_stair', '{', 0.4, 0), yaw: -Math.PI / 2 };
 
 /** Normalise map rows to equal width; returns grid of chars. */
 export function parseMap(rows) {
@@ -598,8 +726,8 @@ export function buildInterior(b, id, rand = Math.random) {
   const rows = grid.length, cols = grid[0].length;
   const ox = -(cols * T) / 2, oz = -(rows * T) / 2;
   const at = (cx, cz) => [ox + (cx + 0.5) * T, oz + (cz + 0.5) * T];
-  const meta = { arrival: null, exit: null, enemies: [], boss: null, npcs: {}, bounds: [ox, oz, ox + cols * T, oz + rows * T], used: new Set() };
-  meta.grid = grid; meta.at = at; meta.T = T;
+  const meta = { arrival: null, exit: null, enemies: [], boss: null, npcs: {}, bounds: [ox, oz, ox + cols * T, oz + rows * T], used: new Set(), marks: {} };
+  meta.grid = grid; meta.at = at; meta.T = T; meta.H = H; meta.def = def;
 
   // floor & ceiling
   const floor = new THREE.Mesh(boxGeo(cols * T, 0.2, rows * T, def.dungeon ? 3 : 2), M(def.floor));
@@ -1261,6 +1389,8 @@ export function buildInterior(b, id, rand = Math.random) {
       }
       default:
         if (/[1-9]/.test(c)) meta.npcs[c] = { x: wx, z: wz };
+        // marker cells: set pieces built by the interior's own decorator (see world/hollowking.js)
+        else if (MARKS.includes(c)) (meta.marks[c] ||= []).push({ x: wx, z: wz, gx: x, gz: z });
     }
   }
 
@@ -1348,7 +1478,7 @@ export function buildInterior(b, id, rand = Math.random) {
   let placed = 0;
   for (let z = 1; z < rows - 1; z++) for (let x = 1; x < cols - 1; x++) {
     if (grid[z][x] !== '.' || meta.used.has(x + ',' + z)) continue;
-    if (near(x, z, ['D', 'P', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'e', 'E', 's', 'G', 'X', 'Y', 'Z', 'V', 'A', 'k', 'a', 'M', 'O', 'q', 'j', 'g', 'R', 'v', 'i', 'U', 'm', 'n', 'o', 'd', 'y', 'N', 'J', 'I', 'f', 'W'], 1)) continue;
+    if (near(x, z, ['D', 'P', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'e', 'E', 's', 'G', 'X', 'Y', 'Z', 'V', 'A', 'k', 'a', 'M', 'O', 'q', 'j', 'g', 'R', 'v', 'i', 'U', 'm', 'n', 'o', 'd', 'y', 'N', 'J', 'I', 'f', 'W', ...MARKS], 1)) continue;
     const walls = [];
     if (grid[z - 1][x] === '#') walls.push([0, -1, 0]);
     if (grid[z + 1][x] === '#') walls.push([0, 1, Math.PI]);

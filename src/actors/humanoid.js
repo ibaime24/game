@@ -142,6 +142,20 @@ export function buildSkinnedHumanoid(opts = {}) {
       add(skinM, skin(rib, B.torso));
     }
     add(skinM, skin(ellipsoid(0.12, 1.3, 0.55, 0.8, 0, 0.94, 0), B.hips));
+    if (o.robe) {
+      // a lich's robe, rotted to lace: a mantle hung from the shoulders, flaring to a ragged hem near the floor
+      const prof = [[0.05, 1.6], [0.17, 1.55], [0.22, 1.42], [0.2, 1.2], [0.22, 1.0], [0.28, 0.7], [0.34, 0.4], [0.38, 0.12]];
+      const robe = prep(new THREE.LatheGeometry(prof.map(([rr, y]) => new THREE.Vector2(rr * b, y)), 22));
+      robe.scale(1.18, 1, 0.86);
+      const rp = robe.attributes.position;
+      for (let i = 0; i < rp.count; i++) {
+        const y = rp.getY(i), x = rp.getX(i), z = rp.getZ(i);
+        // a tattered hem: tongues of cloth of different lengths
+        if (y < 0.5) rp.setY(i, y + (0.5 - y) * Math.max(0, Math.sin(Math.atan2(z, x) * 7) * 0.7 + Math.sin(Math.atan2(z, x) * 17) * 0.35));
+      }
+      robe.computeVertexNormals();
+      add(topM, skin(robe, B.torso, { to: B.hips, fn: (y) => 1 - smooth(0.95, 1.2, y) }));
+    }
   } else {
     const prof = fem
       ? [[0.001, 0.84], [0.14, 0.86], [0.175, 0.95], [0.15, 1.05], [0.125, 1.13], [0.15, 1.27], [0.16, 1.36], [0.165, 1.45], [0.14, 1.52], [0.07, 1.575], [0.001, 1.58]]

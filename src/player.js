@@ -15,7 +15,7 @@ import { RACES } from './data/stats.js';
 import { buildLightMesh, waterproofLight } from './fx/torch.js';
 import { attachBladeFx } from './fx/bladefx.js';
 import { snowCover, roadDistance } from './world/layout.js';
-import { Actor } from './actors/actor.js';
+import { Actor, dressExtras } from './actors/actor.js';
 
 const EYE = 1.62;
 const tmp = new THREE.Vector3();
@@ -166,7 +166,7 @@ export class Player {
         game.ui.notify(`Your ${SKILLS[e.skill][0]} skill has increased to ${e.value}.`, 'skill');
         game.audio.play('skillUp', 0.8);
       } else if (e.type === 'levelReady') {
-        game.ui.notify('You should rest and meditate on what you have learned.', 'level');
+        game.ui.notify(`Level up! Press U to choose an attribute.`, 'level');
         game.audio.play('levelUp', 0.6);
       }
     }
@@ -227,6 +227,7 @@ export class Player {
       return;
     }
     if (it.madlute) { game.playMadLute(); return; }
+    if (it.onUse) { game[it.onUse]?.(id); return; }
     if (it.type === 'potion' || it.type === 'ingredient' || it.usable) {
       for (const e of it.effects || []) this.restore(e.type, e.amount);
       this.removeItem(id, 1);
@@ -254,6 +255,9 @@ export class Player {
       if (id === 'commentaries_1' && game.quests.stage('mq_dawn') === 20) game.quests.set('mq_dawn', 30, game.day());
     }
   }
+
+  /** Is the body model on screen (third person, or holding V to look at yourself)? */
+  get showBody() { return this.thirdPerson || !!this.frontView; }
 
   get torchLit() { return ITEMS[this.equipped.shield]?.type === 'light'; }
 
@@ -312,26 +316,38 @@ export class Player {
     const SET_CLOTH = { starwarden: 0x2a3a88, emberforge: 0x3a2420, frostbloom: 0xc4d2e4 };
     this.modelOpts = { ...modelOpts, kitTint: chestCloth ?? (armorSets.chest ? SET_CLOTH[armorSets.chest] : undefined), kitTintExact: !!armorSets.chest && chestCloth == null, armorSets };
     if (!game.scene) return;
-    this.model = (isKitReady() && buildKitRig(this.modelOpts)) || buildHumanoid(modelOpts);
+    const built = this.buildRig();
+    this.model = built.model;
+    this.modelWeapon = built.weapon;
+    this.modelTorch = built.torch;
+    this.model.root.visible = this.showBody;
+    game.scene.add(this.model.root);
+    this.modelAnim = { phase: 0, moveSpeed: 0, attack: -1, block: false, cast: -1, dead: 0, stagger: 0, draw: -1 };
+  }
+
+  /** A body in the player's current gear: the third-person model, or the inventory's portrait. */
+  buildRig(o = {}) {
+    const model = (isKitReady() && buildKitRig(this.modelOpts)) || buildHumanoid(this.modelOpts);
+    // hats you wear (Brisk's tricorn, the Hollow King's crown) sit on your own head too
+    const headItem = this.equipped.head && ITEMS[this.equipped.head];
+    if (headItem?.hat) dressExtras(model, { hat: headItem.hat, scale: this.modelOpts.scale });
+    let weapon = null, torch = null;
     const w = this.equippedWeapon();
     if (w?.look) {
       const m = buildWeaponMesh(w.look);
-      if (w.skill === 'marksman') { if (this.model.bowSlot) this.model.bowSlot.add(m); else attachBow(this.model.L.hand, m); }
-      else { this.model.weaponSlot.add(m); attachBladeFx(m, w.look, { world: true }); }
-      this.modelWeapon = m;
+      if (w.skill === 'marksman') { if (model.bowSlot) model.bowSlot.add(m); else attachBow(model.L.hand, m); }
+      else { model.weaponSlot.add(m); if (!o.portrait) attachBladeFx(m, w.look, { world: true }); }
+      weapon = m;
     }
-    this.modelTorch = null;
     if (this.torchLit) {
-      this.modelTorch = buildLightMesh(ITEMS[this.equipped.shield]);
-      (this.model.bowSlot ?? this.model.L.hand).add(this.modelTorch);
-      this.model.holdTorch = true;
+      torch = buildLightMesh(ITEMS[this.equipped.shield]);
+      (model.bowSlot ?? model.L.hand).add(torch);
+      model.holdTorch = true;
     } else if (this.equipped.shield) {
-      this.model.shieldSlot.add(buildShieldMesh(ITEMS[this.equipped.shield].color));
-      this.model.hasShield = true;
+      model.shieldSlot.add(buildShieldMesh(ITEMS[this.equipped.shield].color));
+      model.hasShield = true;
     }
-    this.model.root.visible = this.thirdPerson;
-    game.scene.add(this.model.root);
-    this.modelAnim = { phase: 0, moveSpeed: 0, attack: -1, block: false, cast: -1, dead: 0, stagger: 0, draw: -1 };
+    return { model, weapon, torch };
   }
 
   attachModel(scene) {
@@ -385,6 +401,7 @@ export class Player {
       if (this.powersUsed[sp.id] === day) return 'You can only use this power once a day.';
       return null;
     }
+    if (this.silenceT > 0) return 'You have been silenced. The words will not come.';
     const skill = this.ch.skills[sp.school];
     if (skill < sp.min) return `Your ${SKILLS[sp.school][0]} skill is too low to cast ${sp.name}.`;
     if (this.magicka < spellCost(sp.cost, skill)) return 'You do not have enough Magicka to cast this spell.';
@@ -488,6 +505,8 @@ export class Player {
     if (input.wasPressed('KeyC')) { this.sneaking = !this.sneaking; }
     if (input.wasPressed('KeyF')) { this.thirdPerson = !this.thirdPerson; if (this.model) this.model.root.visible = this.thirdPerson; }
     if (input.wasPressed('KeyL')) this.toggleTorch();
+    // hold V to swing the camera round in front of you and see yourself
+    this.frontView = input.isDown('KeyV');
     if (input.wasPressed('KeyR')) { this.weaponOut = !this.weaponOut; game.audio.play(this.weaponOut ? 'swing' : 'pickup', 0.4); }
 
     // ---- seated (the Captain's armchair): any step, jump, swing or spell gets you up again
@@ -630,6 +649,7 @@ export class Player {
     this.fatigue = Math.max(0, this.fatigue);
     const ef = this.effects;
     if (ef.shieldT > 0) { ef.shieldT -= dt; if (ef.shieldT <= 0) ef.shield = 0; }
+    if (this.silenceT > 0) this.silenceT -= dt;
     this.shieldPct = ef.shield;
     if (ef.lightT > 0) ef.lightT -= dt;
     if (ef.detectT > 0) ef.detectT -= dt;
@@ -656,7 +676,7 @@ export class Player {
       a.lookPitch = -this.pitch * 0.4;
       if (this.modelWeapon) this.modelWeapon.visible = this.weaponOut || this.attackT >= 0;
       animateRig(m, a, game.clockT);
-      m.root.visible = this.thirdPerson;
+      m.root.visible = this.showBody;
       if (this.modelTorch) {
         // the wrist keeps the torch upright (tipped a little forward) whatever the arm is doing
         const t = this.modelTorch;
@@ -767,7 +787,7 @@ export class Player {
     const eyeY = this.pos.y + this.eyeHeight() - (this.swimming ? 0.2 : 0);
     this.camY = this.camY === undefined ? eyeY : this.camY + (eyeY - this.camY) * Math.min(1, dt * 12);
     const shake = this.shakeT > 0 ? this.shakeT * 0.06 : 0;
-    const bob = !this.thirdPerson && this.onGround && this.speedNow > 0.5 ? Math.sin(this.bob) * 0.035 : 0;
+    const bob = !this.showBody && this.onGround && this.speedNow > 0.5 ? Math.sin(this.bob) * 0.035 : 0;
     camera.rotation.order = 'YXZ';
     camera.rotation.y = this.yaw + (Math.random() - 0.5) * shake;
     camera.rotation.x = this.pitch + (Math.random() - 0.5) * shake;
@@ -784,6 +804,19 @@ export class Player {
         camera.rotation.y -= s * 0.012 * bump(0.34, 0.72);
       }
     }
+    if (this.frontView) {
+      // looking back at yourself from the front: a little above eye level, framing head to knees
+      const head = new THREE.Vector3(this.pos.x, this.camY - 0.15, this.pos.z);
+      const fwd = this.forward(new THREE.Vector3());
+      const want = head.clone().addScaledVector(fwd, 2.6).add(new THREE.Vector3(0, 0.15, 0));
+      const hit = game.cell.collision.segment(head, want);
+      if (hit) want.copy(head).lerp(want, Math.max(0.25, hit.t - 0.08));
+      this._frontCam = this._frontCam ? this._frontCam.lerp(want, Math.min(1, dt * 10)) : want.clone();
+      camera.position.copy(this._frontCam);
+      camera.lookAt(this.pos.x, this.camY - 0.45, this.pos.z);
+      return;
+    }
+    this._frontCam = null;
     if (!this.thirdPerson) {
       camera.position.set(this.pos.x, this.camY + bob, this.pos.z);
     } else {

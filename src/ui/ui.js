@@ -1,12 +1,13 @@
 // All DOM UI: HUD, compass, menus, dialogue, barter, containers, lockpicking, persuasion, screens.
 import * as THREE from 'three';
 import { ITEMS, FLOWERS, FLOWER_PRICE } from '../data/items.js';
-import { SPELLS, SPELL_PRICES, SPELL_PRICE, WIZARD_SHOP } from '../data/spells.js';
+import { SPELLS, SPELL_PRICES, SPELL_PRICE, WIZARD_SHOP, GUILD_SPELLS } from '../data/spells.js';
 import {
-  RACES, CLASSES, BIRTHSIGNS, SKILLS, ATTRIBUTES, ATTR_LABEL, canLevelUp, attributeBonus, applyLevelUp,
+  RACES, CLASSES, BIRTHSIGNS, SKILLS, ATTRIBUTES, ATTR_LABEL, canLevelUp, attributeBonus, applyLevelUp, levelNeeded, ATTR_HINT, LEVEL_ATTR_GAIN, LEVEL_HEALTH_GAIN,
   spellCost, priceMultiplier, skillXpNeeded,
 } from '../data/stats.js';
 import { DIALOGUE, MERCHANTS } from '../data/dialogue.js';
+import { showPaperDoll } from './paperdoll.js';
 import { QUESTS } from '../data/quests.js';
 import { LOCATIONS, WORLD_HALF, ROADS } from '../world/layout.js';
 import { parseSpec, Inventory } from '../data/items.js';
@@ -129,6 +130,7 @@ export class UI {
     else if (e.code === 'KeyK') this.openMenu('character');
     else if (e.code === 'KeyB') this.openMenu('magic');
     else if (e.code === 'KeyT') this.openWait(false);
+    else if (e.code === 'KeyU' && canLevelUp(g.player.ch)) this.openLevelUp();
     else if (e.code === 'F5') { if (g.save('quick')) this.notify('Quicksave complete.'); }
     else if (e.code === 'F9') { g.load('quick').then((ok) => { if (!ok) this.notify('No quicksave found.'); }); }
   }
@@ -266,7 +268,7 @@ export class UI {
 
     // effects
     const eff = [];
-    if (canLevelUp(p.ch)) eff.push(['Level up ready — sleep in a bed', 'level']);
+    if (canLevelUp(p.ch)) eff.push(['Level up! Press U', 'level']);
     if (p.effects.shieldT > 0) eff.push([`Shield ${p.effects.shield}% (${Math.ceil(p.effects.shieldT)}s)`]);
     if (p.effects.lightT > 0) eff.push([`Light (${Math.ceil(p.effects.lightT)}s)`]);
     if (p.effects.detectT > 0) eff.push([`Detect Life (${Math.ceil(p.effects.detectT)}s)`]);
@@ -659,7 +661,7 @@ export class UI {
     const rows = [
       ['W A S D', 'Move'], ['Mouse', 'Look'], ['Left click', 'Attack (hold for power attack) / draw bow'], ['Right click', 'Block'],
       ['Q', 'Cast selected spell'], ['E', 'Activate: talk, open, take, enter'], ['Space', 'Jump / swim up'], ['Shift', 'Sprint (drains fatigue)'],
-      ['C', 'Toggle sneak'], ['R', 'Ready / sheathe weapon'], ['F', 'Toggle first / third person'], ['Tab / I', 'Inventory & menus'],
+      ['C', 'Toggle sneak'], ['R', 'Ready / sheathe weapon'], ['F', 'Toggle first / third person'], ['Hold V', 'Look at yourself from the front'], ['U', 'Level up (when ready)'], ['Tab / I', 'Inventory & menus'],
       ['K / B / M / J', 'Character / Magic / Map / Journal'], ['T', 'Wait (rest in a bed to level up)'], ['1 – 8', 'Hotkeys (hover an item or spell in the menu and press a number)'],
       ['F5 / F9', 'Quicksave / Quickload'], ['Esc', 'Pause'],
     ];
@@ -710,8 +712,9 @@ export class UI {
         h('h2', { text: p.name }),
         h('div', { class: 'details' }, `${RACES[ch.race].name} ${CLASSES[ch.cls].name}`, h('br'), BIRTHSIGNS[ch.sign].name),
         h('h3', { text: `Level ${ch.level}` }),
-        h('div', { class: 'pbar', title: 'Progress to next level' }, h('i', { style: `width:${Math.min(100, ch.levelProgress * 10)}%` })),
-        h('div', { class: 'hint', text: `${Math.min(10, ch.levelProgress)}/10 major skill increases${canLevelUp(ch) ? ' — rest in a bed to level up!' : ''}` }),
+        h('div', { class: 'pbar', title: 'Progress to next level' }, h('i', { style: `width:${Math.min(100, (ch.levelProgress / levelNeeded(ch)) * 100)}%` })),
+        h('div', { class: 'hint', text: `${Math.min(levelNeeded(ch), ch.levelProgress)}/${levelNeeded(ch)} skill increases to the next level (every skill counts)` }),
+        canLevelUp(ch) ? h('button', { class: 'btn small', style: 'margin-top:6px', text: 'Level up! Choose an attribute', onclick: () => this.openLevelUp() }) : null,
         h('h3', { text: 'Attributes' }), attrs, h('h3', { text: 'Derived' }), derived),
       h('div', { class: 'col', style: 'flex:1;overflow-y:auto;flex-direction:row;gap:16px' }, skillCol('combat'), skillCol('magic'), skillCol('stealth')),
     );
@@ -763,13 +766,17 @@ export class UI {
         }, `${glyphFor(item)} ${item.name}${count > 1 ? ` (${count})` : ''}${hk ? ` [${hk}]` : ''}`, h('span', { class: 'r', text: `${item.weight} · ${item.value}` }));
       }));
     showDetails(null);
+    // your character, standing face-on in what you are wearing right now (drag to turn them round)
+    const doll = h('div', { class: 'doll' });
     body.append(
+      h('div', { class: 'dollcol' }, doll, h('div', { class: 'hint', style: 'text-align:center', text: `${p.name || 'You'} · Level ${p.ch.level}` })),
       h('div', { class: 'col', style: 'flex:1' },
         h('div', { class: 'filters' }, ...Object.entries(filters).map(([k, v]) => h('button', { class: 'btn' + (k === this.invFilter ? ' on' : ''), text: v, onclick: () => { this.invFilter = k; rerender(); } }))),
         list,
         h('div', { class: 'row hint' }, `Gold: ${fmt(p.inventory.gold)}`, h('div', { class: 'spacer' }), `Encumbrance: ${p.encumbrance().toFixed(1)} / ${p.carryLimit()}`, h('div', { class: 'spacer' }), `Armor rating: ${p.armorRating()}`)),
       details,
     );
+    showPaperDoll(p, doll, 220, 372);
   }
 
   tab_magic(body, rerender) {
@@ -951,7 +958,7 @@ export class UI {
         say(['Well... that is generous of you.', 'Coin is always welcome.', 'Hm. Thank you.'][Math.floor(Math.random() * 3)]); g.audio.play('gold'); refresh();
       } }));
       if (actor.merchant) btns.append(h('button', { class: 'btn small', text: 'Barter', onclick: () => this.openBarter(actor) }));
-      if (actor.merchant === 'spells' || (actor.merchant === 'wizard' && g.flags.wizardShop)) btns.append(h('button', { class: 'btn small', text: actor.merchant === 'wizard' ? 'Wonders' : 'Spells', onclick: () => this.openSpellShop(actor) }));
+      if (actor.merchant === 'spells' || (actor.merchant === 'wizard' && g.flags.wizardShop) || (actor.merchant === 'guild' && g.flags.mgMember)) btns.append(h('button', { class: 'btn small', text: actor.merchant === 'wizard' ? 'Wonders' : actor.merchant === 'guild' ? 'Guild Spells' : 'Spells', onclick: () => this.openSpellShop(actor) }));
       if (actor.uid === 'emfrid' || actor.def.innkeeper) {
         const rented = g.rentedUntil > g.time.hours;
         btns.append(h('button', { class: 'btn small', text: rented ? 'Room rented' : 'Rent Room (10g)', disabled: rented || g.player.inventory.gold < 10 ? '' : null, onclick: () => {
@@ -1071,7 +1078,7 @@ export class UI {
     const panel = h('div', { class: 'parch', style: 'width:min(620px,92vw);height:min(520px,80vh);display:flex;flex-direction:column' });
     const render = () => {
       panel.innerHTML = '';
-      const ids = actor.merchant === 'wizard' ? WIZARD_SHOP : Object.keys(SPELL_PRICES);
+      const ids = actor.merchant === 'wizard' ? WIZARD_SHOP : actor.merchant === 'guild' ? GUILD_SPELLS.filter((s) => !s.magister || g.flags.mgMagister).map((s) => s.id) : Object.keys(SPELL_PRICES);
       const list = h('div', { class: 'list', style: 'flex:1' }, ...ids.filter((id) => !p.spells.includes(id)).map((id) => {
         const sp = SPELLS[id], price = SPELL_PRICE;
         return h('div', { class: 'item', onclick: () => {
@@ -1255,27 +1262,31 @@ export class UI {
 
   openLevelUp() {
     const g = this.g, p = g.player, ch = p.ch;
-    const chosen = new Set();
-    const panel = h('div', { class: 'parch levelup', style: 'width:min(480px,92vw)' });
+    let chosen = null;
+    const panel = h('div', { class: 'parch levelup', style: 'width:min(520px,92vw)' });
     const render = () => {
       panel.innerHTML = '';
-      panel.append(h('h2', { text: `Level ${ch.level + 1}` }), h('p', { class: 'muted', text: 'You dream of the challenges you have overcome, and wake stronger. Choose three attributes to improve.' }));
+      panel.append(h('h2', { text: `Level ${ch.level + 1}` }), h('p', { class: 'muted', text: `Everything you have practised has made you stronger. Choose one attribute to raise by ${LEVEL_ATTR_GAIN}. (Your Health rises with every level too.)` }));
       for (const a of ATTRIBUTES) {
-        const bonus = a === 'luck' ? 1 : attributeBonus(ch.attrIncreases[a]);
-        panel.append(h('div', { class: 'attr' + (chosen.has(a) ? ' on' : ''), onclick: () => { if (chosen.has(a)) chosen.delete(a); else if (chosen.size < 3) chosen.add(a); g.audio.play('ui'); render(); } },
-          h('span', { text: ATTR_LABEL[a] }), h('span', { class: 'muted', text: String(ch.attrs[a]) }), h('span', { class: 'bonus', text: `+${bonus}` })));
+        const gain = Math.min(LEVEL_ATTR_GAIN, 100 - ch.attrs[a]);
+        panel.append(h('div', { class: 'attr' + (chosen === a ? ' on' : ''), title: ATTR_HINT[a], onclick: () => { chosen = a; g.audio.play('ui'); render(); } },
+          h('span', { text: ATTR_LABEL[a] }), h('span', { class: 'muted', text: `${ch.attrs[a]}${chosen === a ? ' → ' + (ch.attrs[a] + gain) : ''}` }), h('span', { class: 'bonus', text: gain ? `+${gain}` : 'max' })));
+        if (chosen === a) panel.append(h('div', { class: 'hint', style: 'margin:-2px 0 6px 10px', text: ATTR_HINT[a] }));
       }
-      panel.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'spacer' }), h('button', { class: 'btn', text: 'Level Up', disabled: chosen.size === 3 ? null : '', onclick: () => {
-        applyLevelUp(ch, [...chosen]);
+      panel.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn', text: 'Later', onclick: () => this.closeModal() }), h('div', { class: 'spacer' }), h('button', { class: 'btn', text: 'Level Up', disabled: chosen ? null : '', onclick: () => {
+        applyLevelUp(ch, chosen);
         p.recalc(true);
         g.audio.play('levelUp');
-        this.notify(`You have reached level ${ch.level}!`, 'level');
+        g.particles.burst(p.pos, 'magic', 40, 0xffe080);
+        this.notify(`You have reached level ${ch.level}! ${ATTR_LABEL[chosen]} +${LEVEL_ATTR_GAIN}, Health +${LEVEL_HEALTH_GAIN}.`, 'level');
         this.closeModal();
         g.autosave();
+        // more than one level earned at once: choose again
+        if (canLevelUp(ch)) setTimeout(() => this.openLevelUp(), 300);
       } })));
     };
     render();
-    this.modalEsc = () => {};
+    this.modalEsc = () => this.closeModal();
     this.open(h('div', { class: 'overlay' }, panel), 'menu');
   }
 }

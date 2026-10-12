@@ -19,6 +19,9 @@ export const SPELLS = {
   maras_gift: { id: 'maras_gift', name: "Mara's Gift", school: 'restoration', min: 0, cost: 0, kind: 'self', heal: 200, color: 0xffd0ff, power: true, desc: 'Restore Health 200 pts. Once a day.' },
   lovers_kiss: { id: 'lovers_kiss', name: "Lover's Kiss", school: 'alteration', min: 0, cost: 0, kind: 'self', shield: 30, duration: 60, color: 0xff90c0, power: true, desc: 'Shield 30% for 60 secs. Once a day.' },
   spirit_deer: { id: 'spirit_deer', name: 'Summon Spirit Hart', school: 'conjuration', min: 0, cost: 38, kind: 'summon', creature: 'spirit_deer', duration: 60, color: 0x9affd0, desc: 'Call a Spirit Hart of the Greenheart for 60 secs. It follows you, and while you are hurt it mends your wounds every few seconds.' },
+  // the Mages Guild of Chorrol (The Hollow King)
+  sunbolt: { id: 'sunbolt', name: 'Sunbolt', school: 'destruction', min: 0, cost: 22, kind: 'bolt', element: 'fire', damage: 30, speed: 34, color: 0xfff2c0, undeadBonus: 2, desc: 'White fire 30 pts on target; double against the undead.' },
+  summon_bone_knight: { id: 'summon_bone_knight', name: 'Summon Bone Knight', school: 'conjuration', min: 0, cost: 60, kind: 'summon', creature: 'bone_knight_summon', duration: 45, color: 0x9ad0ff, desc: 'Summon one of Ashgrave\'s Bone Knights to fight for you for 45 secs.' },
   moonshadow: { id: 'moonshadow', name: 'Moonshadow', school: 'illusion', min: 0, cost: 0, kind: 'invisibility', duration: 60, color: 0x8080a0, power: true, desc: 'Invisibility for 60 secs. Once a day.' },
 };
 
@@ -61,6 +64,17 @@ export const WONDERS = [
   W('reveal', 'Reveal', 'mysticism', 0, 16, 90, 0xffe060, 'self', 'Pillars of light mark every container and loose item within 40 m for 15 secs.'),
 ];
 for (const w of WONDERS) SPELLS[w.id] = w;
+
+// ---- the Mages Guild of Chorrol: taught at the Guild's spell table to Associates (the Ring of Rime only to its Magister)
+const GS = (id, name, school, min, cost, color, anim, desc, extra = {}) => ({ id, name, school, min, cost, kind: 'special', color, anim, desc, guild: true, ...extra });
+export const GUILD_SPELLS = [
+  GS('starfall', 'Starfall', 'destruction', 25, 60, 0xcfe4ff, 'raise', 'Seven stars fall from the sky around where you aim, one after another: shock 22 pts in 3 m each.', { damage: 22 }),
+  GS('founders_light', "Founders' Light", 'restoration', 0, 30, 0xcfe4ff, 'raise', 'A blue-white orb follows you for 60 secs, lighting the dark and burning undead within 6 m for 8 pts every second.', { damage: 8, duration: 60 }),
+  GS('hollow_step', 'Hollow Step', 'alteration', 0, 26, 0x9ad8ff, 'flick', 'Step through the cold up to 18 m in the direction you look. Frost bursts where you leave and where you land: frost 15 pts and slow.', { damage: 15 }),
+  GS('founders_ward', "Founders' Ward", 'alteration', 0, 40, 0xffe8b0, 'self', 'Shield 50% for 20 secs. The sun, moon and star circle you, and the undead that strike you are burned 10 pts.', { duration: 20 }),
+  GS('ring_of_rime', 'Ring of Rime', 'destruction', 0, 50, 0xd8f4ff, 'slam', 'From the Hollow King\'s grimoire: a ring of frost rolls out from you to 14 m. Frost 30 pts, slow and stagger on every foe it passes.', { damage: 30, magister: true }),
+];
+for (const s of GUILD_SPELLS) SPELLS[s.id] = s;
 export const WIZARD_SHOP = WONDERS.map((w) => w.id);
 
 export const SPELL_SHOP = ['frostbite', 'shock_bolt', 'fireball', 'heal_major', 'open_easy_lock', 'summon_scamp', 'starlight', 'detect_life', 'protect', 'summon_skeleton'];

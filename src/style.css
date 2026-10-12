@@ -123,7 +123,7 @@ button { font-family: var(--title); }
 .list .head .r { margin-left: auto; }
 
 /* menu */
-.menu { width: min(980px, 94vw); height: min(640px, 88vh); display: flex; flex-direction: column; }
+.menu { width: min(1120px, 96vw); height: min(640px, 88vh); display: flex; flex-direction: column; }
 .tabs { display: flex; gap: 4px; margin: -8px 0 12px; }
 .tab { font-family: var(--title); padding: 6px 16px; cursor: pointer; border: 1px solid rgba(90, 60, 20, 0.6); background: rgba(90, 60, 20, 0.15); color: var(--ink); font-size: 15px; }
 .tab.on { background: #3a2610; color: #f0dca0; }
@@ -232,3 +232,11 @@ input[type=range] { width: 100%; accent-color: #6a4a1a; }
 .levelup .attr { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid rgba(90, 60, 20, 0.3); margin-bottom: 4px; cursor: pointer; }
 .levelup .attr.on { background: rgba(120, 80, 20, 0.35); }
 .levelup .attr .bonus { margin-left: auto; font-family: var(--title); color: #2a5a10; }
+
+/* the inventory's portrait of your character */
+.dollcol { width: 228px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.doll { width: 220px; height: 372px; border: 1px solid rgba(90, 60, 20, 0.35); border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 38%, rgba(255, 236, 200, 0.55), rgba(120, 84, 44, 0.25) 60%, rgba(40, 26, 14, 0.35));
+  box-shadow: inset 0 0 24px rgba(40, 24, 8, 0.35); }
+.doll canvas { display: block; cursor: grab; }
+.doll canvas:active { cursor: grabbing; }

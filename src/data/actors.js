@@ -145,7 +145,7 @@ export const TEMPLATES = {
   },
   goblin_chief: {
     name: 'Chief Gorbag Skullsnow', unique: true, body: { kind: 'human', head: 'goblin', skin: 0x5a7a4a, shirt: 0x8a8a7a, pants: 0x3a2a18, scale: 1.08, hunch: 0.25, sleeves: false, hairStyle: 'mohawk', hair: 0xe8e8e0, armor: { chest: 0xd8d0c0, head: 0xe0dcd0 } },
-    weapon: 'steel_mace', armor: ['fur_cuirass', 'fur_helmet'], health: 170, damage: 0, speed: 4.8, reach: 2.5, attackRate: 0.95, level: 6, fixedLevel: true, ai: 'melee', loot: 'goblin', extraLoot: ['gold*90'], radius: 0.45, sound: 'grunt', block: 0.3,
+    weapon: 'steel_mace', armor: ['fur_cuirass', 'fur_helmet'], health: 170, damage: 0, speed: 4.8, reach: 2.5, attackRate: 0.95, level: 6, fixedLevel: true, ai: 'melee', loot: 'goblin', extraLoot: ['gold*90', 'bastien_receipt'], radius: 0.45, sound: 'grunt', block: 0.3,
     faction: 'neutral', band: 'frostfang', dialogue: 'gorbag',
     taunts: ['Gorbag crush tiny thief!', 'Moonfeast will have meat after all!', 'FROSTFANG! To Gorbag!'],
   },
@@ -191,6 +191,25 @@ export const TEMPLATES = {
     name: 'Lady Pinch', unique: true, body: { kind: 'crab', color: 0x5a7a6a, scale: 2.6 }, health: 200, damage: 14, speed: 2.6, reach: 3.2, attackRate: 0.8, level: 5, fixedLevel: true,
     ai: 'beast', loot: 'mudcrab', extraLoot: ['pearl*2'], radius: 1.4, armor: 40, sound: 'crab', aggroRange: 14,
     taunts: ['PINCH.', 'My nephew writes that you were RUDE to him.', 'This is MY lantern now, landwalker!'],
+  },
+  // ---------------- The Hollow King (the Mages Guild questline)
+  hollow_thrall: {
+    name: 'Ashgrave Thrall', body: { kind: 'human', bones: true, skin: 0xc8d4e0, head: 'skull', emissiveEyes: 0x8ad8ff, robe: true, shirt: 0x34406a }, weapon: 'iron_shortsword',
+    health: 50, damage: 0, speed: 4.2, reach: 2.4, attackRate: 1.0, level: 3, ai: 'melee', loot: 'ashgrave', radius: 0.36, sound: 'rattle', undead: true, gore: 'bone', element: 'frost',
+    taunts: ['The Master wakes.', 'Never stop. Never stop.', 'You will make a fine student.'],
+  },
+  bone_knight: {
+    name: 'Bone Knight', body: { kind: 'human', bones: true, skin: 0xb8c4d0, head: 'skull', emissiveEyes: 0x9ae0ff, scale: 1.15, armor: { chest: 0x2a2c38, head: 0x2a2c38 } }, weapon: 'steel_longsword', shield: 'iron_shield',
+    health: 120, damage: 0, speed: 4.3, reach: 2.6, attackRate: 0.9, level: 5, ai: 'melee', loot: 'ashgrave', radius: 0.42, sound: 'rattle', undead: true, gore: 'bone', block: 0.35,
+  },
+  bone_knight_summon: {
+    name: 'Bone Knight', body: { kind: 'human', bones: true, skin: 0xd0dce8, head: 'skull', emissiveEyes: 0xcfe4ff, scale: 1.12, armor: { chest: 0x3a3c4a, head: 0x3a3c4a } }, weapon: 'steel_longsword', shield: 'iron_shield',
+    health: 110, damage: 0, speed: 5.2, reach: 2.6, attackRate: 1.0, level: 1, ai: 'melee', radius: 0.42, undead: true, faction: 'ally', summon: true, gore: 'bone', block: 0.3,
+  },
+  heartwarden: {
+    name: 'Heartwarden', unique: true, body: { kind: 'human', bones: true, skin: 0xa8bcd0, head: 'skull', emissiveEyes: 0xbfe8ff, scale: 1.3, robe: true, shirt: 0x1a2a4a, hat: 'crown' }, weapon: 'iron_waraxe',
+    health: 170, damage: 0, speed: 4.0, reach: 2.8, attackRate: 0.85, level: 6, fixedLevel: true, ai: 'melee', loot: 'ashgrave', radius: 0.45, sound: 'rattle', undead: true, gore: 'bone', element: 'frost',
+    taunts: ['The heart is not yours!', 'The Master\'s heart! Give it back!', 'Four hundred years I have guarded it!'],
   },
   // ---------------- the Mythic Dawn
   dawn_assassin: {
@@ -268,6 +287,9 @@ export const LEVELED = {
   drowned: [['drowned', 1, 4], ['drowned_harpooner', 2, 2]],
   drowned_grotto: [['mudcrab', 1, 2], ['drowned', 1, 3], ['drowned_harpooner', 2, 1]],
   cove_shore: [['mudcrab', 1, 1]],
+  ashgrave_low: [['hollow_thrall', 1, 3], ['skeleton', 1, 2], ['ice_wraith', 2, 1]],
+  ashgrave: [['hollow_thrall', 1, 4], ['bone_knight', 3, 2], ['ice_wraith', 2, 2]],
+  ashgrave_snow: [['hollow_thrall', 1, 3], ['ice_wraith', 1, 2]],
 };
 
 export function pickLeveled(list, playerLevel, rand = Math.random) {
@@ -377,6 +399,17 @@ export const NPCS = [
     skin: 0x9ab8b0, opacity: 0.55, float: true, emissiveEyes: 0xc0ffe0, ghostly: true, stationary: true, spawnUnless: 'briskGone',
     ai: 'caster', spells: ['frostbite', 'frostbite'], health: 260, magicka: 300, reach: 18, attackRate: 0.8, level: 8, fixedLevel: true, loot: 'drowned', extraLoot: ['brisk_tricorn'],
     taunts: ['Give me my CAT!', 'Forty years! FORTY YEARS!', 'All hands! Repel boarders!', 'You\'re no better than that crying cabin boy!'] },
+  // The Hollow King: the Mages Guild of Chorrol
+  { id: 'ondine', tpl: 'citizen', name: 'Guild-Magister Ondine Vell', race: 'breton', cell: 'mages_guild', dialogue: 'ondine', female: true, robe: true, shirt: 0x34346a, kitTint: 0x5a5aa8, hair: 0xd8d8d8, hairStyle: 'long', essential: true, stationary: true, hideWhen: 'ondineAway', idleAnim: 'Idle_FoldArms_Loop' },
+  { id: 'merle', tpl: 'citizen', name: 'Merle Hask', race: 'nord', cell: 'mages_guild', dialogue: 'merle', merchant: 'guild', female: true, robe: true, shirt: 0x4a5a3a, kitTint: 0x6a7a4a, hair: 0xd8b070, hairStyle: 'long', essential: true, stationary: true },
+  { id: 'bastien', tpl: 'citizen', name: 'Bastien Lorne', race: 'imperial', cell: 'none', dialogue: 'bastien', robe: true, shirt: 0x2a3050, kitTint: 0x3a4070, hair: 0x2a1a10, hairStyle: 'short', stationary: true,
+    ai: 'caster', spells: ['frostbite', 'shock_bolt'], health: 160, magicka: 400, reach: 18, attackRate: 0.85, level: 6, fixedLevel: true, loot: 'none', extraLoot: ['ashgrave_heart'],
+    taunts: ['He will teach me EVERYTHING!', 'You don\'t understand! Nobody ever understands!', 'I\'m sorry! I\'m sorry!'] },
+  { id: 'bastien_home', tpl: 'citizen', name: 'Bastien Lorne', race: 'imperial', cell: 'mages_guild', dialogue: 'bastien', robe: true, shirt: 0x2a3050, kitTint: 0x3a4070, hair: 0x2a1a10, hairStyle: 'short', essential: true, stationary: true, spawnIf: 'bastienHome' },
+  { id: 'hollow_king', tpl: 'citizen', name: 'Severin Ashgrave, the Hollow King', cell: 'ashgrave_throne', dialogue: 'hollow_king', bones: true, head: 'skull', skin: 0xc8d8e8, emissiveEyes: 0x7ad0ff, robe: true, shirt: 0x2a3a66, kitTint: 0x2a3a60, hat: 'crown', scale: 1.7, float: true,
+    undead: true, pillarWarded: true, stationary: true, spawnUnless: 'ashgraveDead', noFacePlayer: false,
+    ai: 'caster', spells: ['frostbite', 'shock_bolt', 'fireball'], health: 520, magicka: 2000, reach: 20, attackRate: 0.75, level: 12, fixedLevel: true, loot: 'none', radius: 0.45,
+    taunts: ['A mind is the only thing worth keeping.', 'I lit the first lamp of your Guild. I will light the last.', 'You are clever. Stay. Stay and learn.', 'Four hundred years in the dark, and you think I have not been practising?'] },
   { id: 'roxey_keeper', tpl: 'citizen', name: 'Mirabelle Monet', race: 'breton', cell: 'world', x: 64, z: 40, wander: 4, dialogue: 'innkeeper_roxey', merchant: 'food', shirt: 0x7a5a6a, female: true, essential: true },
 ];
 

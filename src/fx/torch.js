@@ -79,7 +79,7 @@ export function buildLanternMesh(ghost = false) {
   const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.07, 0.022, 12), M.iron);
   plate.position.y = 0.455;
   const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.068, 0.16, 12, 1, true),
-    new THREE.MeshStandardMaterial({ color: ghost ? 0x9affc8 : 0xffd890, emissive: ghost ? 0x30ff90 : 0xff9a30, emissiveIntensity: 0.3, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+    new THREE.MeshStandardMaterial({ color: ghost === 'founder' ? 0xd8ecff : ghost ? 0x9affc8 : 0xffd890, emissive: ghost === 'founder' ? 0x6aa8ff : ghost ? 0x30ff90 : 0xff9a30, emissiveIntensity: 0.3, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
   glass.position.y = 0.545;
   const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0xf2e8d0, roughness: 0.6, emissive: 0xffb060, emissiveIntensity: 0.25 }));
   candle.position.y = 0.49;
@@ -104,7 +104,7 @@ export function buildLanternMesh(ghost = false) {
 
 /** The mesh for a carried light item. */
 export function buildLightMesh(item) {
-  return item?.lightStyle === 'lantern' || item?.lightStyle === 'ghost' ? buildLanternMesh(item.lightStyle === 'ghost') : buildTorchMesh();
+  return ['lantern', 'ghost', 'founder'].includes(item?.lightStyle) ? buildLanternMesh(item.lightStyle === 'lantern' ? false : item.lightStyle) : buildTorchMesh();
 }
 
 // how each kind of carried light burns
@@ -112,10 +112,12 @@ const STYLES = {
   torch: { flame: 0.11, halo: 3.4, color: 0xff9440, intensity: 15, distance: 15, decay: 1.7, flicker: 1, sparks: true },
   lantern: { flame: 0.042, halo: 7.5, color: 0xffc27a, intensity: 17, distance: 19, decay: 1.6, flicker: 0.35, sparks: false },
   // a drowned sailor's light: cold green, and the sea can't put it out
+  // the Founders' Ember: blue-white, steady, and very bright
+  founder: { flame: 0.05, halo: 9, color: 0xcfe4ff, intensity: 20, distance: 22, decay: 1.5, flicker: 0.12, sparks: false },
   ghost: { flame: 0.042, halo: 7.5, color: 0x7affc0, intensity: 15, distance: 18, decay: 1.6, flicker: 0.2, sparks: false },
 };
 /** Lights that keep burning when you swim. */
-export const waterproofLight = (item) => item?.lightStyle === 'lantern' || item?.lightStyle === 'ghost';
+export const waterproofLight = (item) => ['lantern', 'ghost', 'founder'].includes(item?.lightStyle);
 
 /**
  * The world half of the torch: flame, light and sparks, placed each frame at the tip of whichever torch

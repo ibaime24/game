@@ -13,6 +13,7 @@ import { buildWintersmeet, buildWhiteHareSites, buildRabbitSites } from './winte
 import { buildLegendarySwords, buildArmorDisplay } from './legendary.js';
 import { buildGreenheart, buildHollowElder, GH } from './greenheart.js';
 import { buildCove, buildSmugglersCut, buildLostCatPoster } from './cove.js';
+import { buildStarfall, buildHollowGate, decorateHollowInterior } from './hollowking.js';
 import { CHORROL_CRITTERS } from './chorrol.js';
 import { buildKitRig } from '../actors/kitRig.js';
 import { isKitReady, getClip } from '../actors/characterKit.js';
@@ -20,7 +21,7 @@ import { RACES } from '../data/stats.js';
 import { buildInterior, INTERIORS } from './interiors.js';
 import { buildOblivion, OB, OB_SPAWNS } from './oblivion.js';
 import {
-  heightAt, roadDistance, forestDensity, LOCATIONS, KVATCH_BURN, WATER_LEVEL, LAKE, chorrolPaving, snowCover, wintersmeetPaving, COVE,
+  heightAt, roadDistance, forestDensity, LOCATIONS, KVATCH_BURN, WATER_LEVEL, LAKE, chorrolPaving, snowCover, wintersmeetPaving, HK, COVE,
 } from './layout.js';
 import { createNoise2D, fbm, smoothstep, lerp } from '../core/noise.js';
 import { NPCS } from '../data/actors.js';
@@ -157,6 +158,9 @@ export function createWorldCell(game) {
   state.legendary = buildLegendarySwords(b, terrain, game);
   buildHollowElder(b, terrain, LOCATIONS.hollow_elder);
   buildSmugglersCut(b, terrain, LOCATIONS.smugglers_cut);
+  // the Hollow King: the Guild's ruined observatory, and the black-ice gate in the north-east Jerall
+  buildStarfall(b, terrain);
+  state.hollowGate = buildHollowGate(b, terrain, game);
   if (b.libramPage && !game.taken.libram_page_oak_pickup) {
     const pg = b.libramPage;
     const it = game.placeItem(b, 'libram_page_oak', pg.x, pg.y, pg.z, 'libram_page_oak_pickup', { rot: 0.6, radius: 0.6 });
@@ -185,6 +189,8 @@ export function createWorldCell(game) {
   S(null, 335, -365, 1, 1, { unique: 'black_brugo' });
   S('undead_night', -470, 360, 1, 12, { nightOnly: true });
   S('dawn', -580, 395, 3, 7);
+  // the Hollow King's dead walk the snow round his gate once the hunt for his Hearts begins
+  for (const [x, z] of [HK.gateSpawns[0], HK.gateSpawns[1], HK.gateSpawns[4]]) S('ashgrave_snow', x, z, 2, 6, { needsFlag: 'mgHearts', needsNoFlag: 'ashgraveDead' });
   S(null, LOCATIONS.chorrol.x + 92, LOCATIONS.chorrol.z + 6, 1, 1, { unique: 'wisp', needsFlag: 'wizardQuest' });
   S(null, 91, 66, 1, 1, { unique: 'sir_pinchington' }); S('shore', 97, 72, 2, 6);
   S('shore', 96, 396, 2, 5); S(null, 89, 402, 1, 1, { unique: 'bell_warden' });
@@ -280,6 +286,7 @@ export function createInteriorCell(game, id) {
     const [wx, wz] = meta.at(11, 6);
     buildLostCatPoster(b, wx + meta.T / 2 - 0.03, 2.05, wz, -Math.PI / 2, 'poster_inn');
   }
+  decorateHollowInterior(game, cell, b, meta, id);
   if (meta.crystal) buildHallOfHours(game, cell, b, meta);
   buildArmorDisplay(game, cell, b, meta, id);
   if (meta.statue) buildDagonShrine(game, cell, b, meta);

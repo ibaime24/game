@@ -31,6 +31,8 @@ import { windUniform } from './world/vegetation.js';
 import { GH } from './world/greenheart.js';
 import { LOCATIONS, snowCover, COVE } from './world/layout.js';
 import { ADMIRAL } from './admiral.js';
+import { GUILD } from './guild.js';
+import { SaveFiles } from './core/saves.js';
 import { setWindowGlow } from './world/builder.js';
 import { canLevelUp, detectChance, SKILL_IDS } from './data/stats.js';
 import { UI } from './ui/ui.js';
@@ -328,7 +330,10 @@ export const game = {
     this.fpsAcc = 0; this.fpsN = 0; this.fps = 60;
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
-    this.ui.showTitle();
+    // bring the save files on disk into the browser before the title screen lists them
+    SaveFiles.sync(SAVE_PREFIX, { settings: 'oblivion_clone_settings' }).then((changed) => {
+      if (changed) { this.loadSettings(); this.applySettings(); }
+    }).finally(() => this.ui.showTitle());
     loadCharacterKit();
     loadProps();
     loadPhotoTextures(); // start fetching while the player reads the title screen
@@ -338,7 +343,9 @@ export const game = {
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem('oblivion_clone_settings') || '{}')); } catch { /* defaults */ }
   },
   saveSettings() {
-    try { localStorage.setItem('oblivion_clone_settings', JSON.stringify(this.settings)); } catch { /* ignore */ }
+    const text = JSON.stringify(this.settings);
+    try { localStorage.setItem('oblivion_clone_settings', text); } catch { /* ignore */ }
+    SaveFiles.write('settings', text);
     this.applySettings();
   },
   applySettings() {
@@ -481,7 +488,8 @@ export const game = {
     if (this.corwynScene) this.abortCorwynScene();
     if (this.moot) this.endMoot(false, true);
     if (this.lap) this.standUp(false);
-    if (this.cell) this.coveOnLeave(this.cell.id, id);
+    if (this.cell) { this.coveOnLeave(this.cell.id, id); this.guildOnLeave(this.cell.id, id); }
+    if (this.gateRite) this.abortGateRite();
     if (this.cell) {
       this.scene.remove(this.cell.group);
       for (const a of this.cell.actors) this.scene.remove(a.group);
@@ -553,6 +561,7 @@ export const game = {
     }
     // the Admiral, trotting after you on her way home; the Captain, aboard the Meringue
     if (this.flags.admiralFollowing && !followers.some((a) => a.uid === 'admiral') && !cell.actors.some((a) => a.uid === 'admiral')) followers.push(this.makeAdmiral(p.x + 1.2, y, p.z + 1.2));
+    this.guildFollowers(followers, p, y, cell);
     if (this.flags.gallowglassFollowing && id === 'meringue' && !followers.some((a) => a.uid === 'gallowglass_follow') && !cell.actors.some((a) => a.uid === 'gallowglass_follow')) followers.push(this.makeCaptainFollower(p.x - 1, y, p.z + 1));
     this.dawnExposedCell = null;
     this.silentTheft = false;
@@ -589,6 +598,7 @@ export const game = {
     if (this.lightwatch && id !== 'world') this.lightwatch = null;
     if (this.namingNight && id !== 'cove') this.endNamingNightCrowd();
     this.coveOnEnter(id);
+    this.guildOnEnter(id);
 
     // environment
     this.sky.mesh.visible = cell.hasSky;
@@ -742,6 +752,7 @@ export const game = {
   },
   onItemGained(id) {
     this.coveOnItem(id);
+    this.guildOnItem(id);
     if (id === 'brugo_head' && this.quests.stage('ms_bounty') < 20) this.quests.set('ms_bounty', 20, this.day());
     if (id === 'jemane_blade' && this.quests.stage('ms_heirloom') < 20) this.quests.set('ms_heirloom', 20, this.day());
     const map = this.quests.stage('sq_map');
@@ -796,6 +807,7 @@ export const game = {
     if (killer?.isPlayer || killer?.faction === 'ally') this.ui.notify(`${actor.name} has been slain.`);
     if (actor.uid === 'aurelian') this.flags.recruiterGone = true;
     this.coveOnDeath(actor);
+    this.guildOnDeath(actor);
     if (actor.def.tplId === 'wisp') {
       // the wisp bursts, and the page it was playing with flutters down
       const at = actor.pos.clone();
@@ -936,6 +948,7 @@ export const game = {
     this.tickPets();
     this.tickBunnies();
     this.tickCove();
+    this.tickGuild();
     if (this.moot) this.tickMoot();
     // Henrietta glows, and can be caught if you get right up close
     if (c.id === 'world' && this.flags.wizardQuest && !this.flags.henCaught) {
@@ -2372,6 +2385,7 @@ export const game = {
       case 'door': {
         if (t.lock && !(t.lock.key && p.inventory.has(t.lock.key))) return this.ui.openLockpick(t, () => this.activate());
         if (t.locked) return this.ui.showMessage(t.name, t.lockMsg || (t.lockLevel ? `The door is locked tight. ${t.name} is a private residence.` : 'This door is locked.'));
+        if (t.guildDoor && this.guildDoorBlocked()) return;
         if (t.cell) {
           this.audio.play('door');
           if (this.cell.id === 'world') this.doorReturns._last = this.exitPointFor(t);
@@ -2384,6 +2398,8 @@ export const game = {
             if (t.cell === 'cove') return this.enterCell('cove', this.doorReturns._cove || this.coveDoorFor(this.cell.id));
             if (t.cell === 'oblivion') return this.enterCell('oblivion', this.cells.oblivion?.state.towerDoor);
           }
+          // doors that know exactly where they come out (the Hollow halls)
+          if (t.at) return this.enterCell(t.cell, t.at);
           if (this.cell.id === 'oblivion' && t.cell === 'sigil') this.oblivionReturn = this.cells.oblivion.state.towerDoor;
           return this.enterCell(t.cell);
         }
@@ -2420,6 +2436,14 @@ export const game = {
         return this.ui.showBook(ITEMS.lost_cat_poster);
       }
       case 'fishspot': return this.useFishSpot(t);
+      case 'wardlamp': return this.useWardLamp(t);
+      case 'founderpool': return this.examineFounderPool(t);
+      case 'sealorrery': return this.useSealOrrery(t);
+      case 'hollowgate': return this.useHollowGate(t);
+      case 'heartstone': return this.useHeartstone(t);
+      case 'heartniche': return this.useHeartNiche(t);
+      case 'thronedoor': return this.useThroneDoor(t);
+      case 'shieldpillar': return this.useShieldPillar(t);
       case 'jollyboat': return this.useJollyBoat(t);
       case 'lapchair': return this.useLapChair(t);
       case 'seachest': return this.useSeaChest(t);
@@ -2902,10 +2926,10 @@ export const game = {
     const p = this.player;
     let tip = null, visible = true;
     if (p.torchLit && !p.dead) {
-      if (p.thirdPerson && p.modelTorch) {
+      if (p.showBody && p.modelTorch) {
         tip = p.modelTorch.userData.tip.getWorldPosition(_torchTip);
         visible = p.modelTorch.visible;
-      } else if (!p.thirdPerson && this.viewmodel.torchMesh) {
+      } else if (!p.showBody && this.viewmodel.torchMesh) {
         tip = _torchTip.copy(this.viewmodel.torchTip);
         visible = this.viewmodel.torchHeld && this.viewmodel.root.visible;
       }
@@ -2913,8 +2937,8 @@ export const game = {
     const c = this.cell;
     this.carriedTorch.update(dt, tip, {
       t: this.clockT, night: c.interior || c.id === 'oblivion' ? 1 : this.sky.night,
-      firstPerson: !p.thirdPerson, visible, particles: this.state === 'playing' ? this.particles : null,
-      scale: p.thirdPerson ? 1 : this.viewmodel.torchScale,
+      firstPerson: !p.showBody, visible, particles: this.state === 'playing' ? this.particles : null,
+      scale: p.showBody ? 1 : this.viewmodel.torchScale,
       style: ITEMS[p.equipped.shield]?.lightStyle || 'torch',
     });
   },
@@ -2927,8 +2951,8 @@ export const game = {
     const kind = w?.look?.fx;
     let at = null;
     if (kind && !p.dead) {
-      if (!p.thirdPerson && this.viewmodel.bladeShown) at = this.viewmodel.bladeTip;
-      else if (p.thirdPerson && p.modelWeapon?.visible) at = p.modelWeapon.localToWorld(_torchTip.set(0, 0.6, 0));
+      if (!p.showBody && this.viewmodel.bladeShown) at = this.viewmodel.bladeTip;
+      else if (p.showBody && p.modelWeapon?.visible) at = p.modelWeapon.localToWorld(_torchTip.set(0, 0.6, 0));
     }
     if (!at) { this.bladeLight.intensity = 0; return; }
     this.bladeLight.position.copy(at);
@@ -2995,7 +3019,10 @@ export const game = {
     if (!this.cell || this.state === 'dead') return false;
     for (const c of Object.values(this.cells)) for (const it of c.interactables) if (it.kind === 'container' && it.inventory) this.persistContainer(it);
     try {
-      localStorage.setItem(SAVE_PREFIX + slot, JSON.stringify(this.serialize(desc)));
+      const text = JSON.stringify(this.serialize(desc));
+      // a full browser storage must not lose the save: the file on disk still gets it
+      try { localStorage.setItem(SAVE_PREFIX + slot, text); } catch (e) { if (!SaveFiles.available) throw e; }
+      SaveFiles.write(slot, text);
       return true;
     } catch (e) {
       console.error(e);
@@ -3049,6 +3076,7 @@ export const game = {
     this.doorReturns._cove = s.coveDoor || undefined;
     this.oblivionReturn = s.oblivionReturn;
     this.raid = null; this.namingNight = null; this.lap = null; this.player.seated = null; this.hudBanner(null);
+    this.gateRite = null; this.hk = null;
     // rebuild transient cells; keep the expensive overworld but reset its actors
     for (const id of Object.keys(this.cells)) if (id !== 'world') delete this.cells[id];
     if (this.cell) { this.scene.remove(this.cell.group); for (const a of this.cell.actors) this.scene.remove(a.group); this.cell = null; }
@@ -3082,6 +3110,7 @@ export const game = {
     this.taken = {}; this.harvested = {}; this.containers = {}; this.unlocked = {}; this.discovered = {}; this.shrines = {};
     this.crime.clear();
     this.raid = null; this.namingNight = null; this.lap = null; this.player.seated = null; this.hudBanner(null);
+    this.gateRite = null; this.hk = null;
     this.quests.load({});
     this.player.newCharacter(opts);
     this.viewmodel.rebuild();
@@ -3097,5 +3126,5 @@ function nextFrame() {
   return new Promise((r) => requestAnimationFrame(() => r()));
 }
 
-// the Brinewhistle Cove questline lives in its own file
-Object.assign(game, ADMIRAL);
+// the Brinewhistle Cove and Mages Guild questlines live in their own files
+Object.assign(game, ADMIRAL, GUILD);

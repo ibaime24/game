@@ -102,7 +102,7 @@ function buildBody(def, rand) {
 }
 
 /** Hats and sea-rot, fixed to the head bone wherever the rig put it. */
-function dressExtras(rig, b) {
+export function dressExtras(rig, b) {
   if (!b || !rig.head || (!b.hat && !b.seaweed)) return;
   rig.root.updateMatrixWorld(true);
   const head = rig.head.getWorldPosition(new THREE.Vector3());
@@ -670,6 +670,8 @@ export class Actor {
 
   die(killer) {
     if (this.dead) return;
+    // the Hollow King cannot die while his last Heart beats
+    if (game.preventDeath?.(this)) return;
     if (this.essential) {
       // essential characters are knocked out instead
       this.health = 1;

@@ -3,7 +3,7 @@
 // (first person) and kitRig.js (third person), keyed by each spell's `anim`.
 import * as THREE from 'three';
 import { applyHit, allTargets, isHostile } from '../combat.js';
-import { setLinePoints } from './magic.js';
+import { setLinePoints, magicTextures } from './magic.js';
 import { Actor } from '../actors/actor.js';
 import { ITEMS } from '../data/items.js';
 import { softSprite } from '../world/textures.js';
@@ -89,7 +89,7 @@ export class Spellbook {
   /** Where the casting hand is, in the world. */
   handPos() {
     const p = this.game.player;
-    if (p.thirdPerson) return p.center(V()).add(p.lookDir().multiplyScalar(0.6)).add(V().set(0, 0.35, 0));
+    if (p.showBody) return p.center(V()).add(p.lookDir().multiplyScalar(0.6)).add(V().set(0, 0.35, 0));
     const cam = this.game.camera;
     return V().set(-0.18, -0.16, -0.6).applyQuaternion(cam.quaternion).add(cam.position);
   }
@@ -771,6 +771,225 @@ export class Spellbook {
   }
 
   // ---------------------------------------------------------------- per frame
+  // ---------------------------------------------------------------- the Mages Guild of Chorrol (The Hollow King)
+  // Storybook magic: four-point star glints, chunky pixel sparks, snowflakes, pastel colours that twinkle.
+  /** A big spinning four-point star sprite (the signature glint), with a soft halo. */
+  starSprite(color, size = 1) {
+    const T = magicTextures();
+    const g = new THREE.Group();
+    const halo = new THREE.Sprite(spriteMat(color, 0.55, T.glow)); halo.scale.setScalar(size * 2.6);
+    const st = new THREE.Sprite(spriteMat(new THREE.Color(color).lerp(new THREE.Color(1, 1, 1), 0.45), 1, T.star)); st.scale.setScalar(size * 1.6);
+    g.add(halo, st);
+    g.userData.star = st; g.userData.halo = halo;
+    return g;
+  }
+  /** A spray of retro sparks: pixels, stars and (for frost) flakes, in a little palette. */
+  sparkle(at, palette, n, speed = 4, o = {}) {
+    const tmp = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      const a = r() * TAU, b = r() * Math.PI * (o.up ? 0.5 : 1);
+      const s = speed * (0.4 + r() * 0.8);
+      const shape = o.flakes && i % 2 ? 'flake' : i % 3 === 0 ? 'star' : 'pixel';
+      this.P.emit({ x: at.x, y: at.y, z: at.z, vx: Math.cos(a) * Math.sin(b) * s, vy: Math.cos(b) * s * (o.up ? 1 : 0.8) + (o.lift || 0), vz: Math.sin(a) * Math.sin(b) * s, gravity: o.gravity ?? 5, drag: 1.2, life: 0.6 + r() * 0.7, size: shape === 'star' ? 0.32 : shape === 'flake' ? 0.22 : 0.11, color: tmp.set(palette[i % palette.length]), shape });
+    }
+  }
+
+  /** Starfall: seven stars tumble out of the sky round where you aim, one after another, in pastel trails. */
+  starfall(p, sp, mag) {
+    const game = this.game, at = this.aimPoint(40), col = game.cell.collision;
+    const palette = [0xcfe4ff, 0xffd6f0, 0xfff2b0, 0xb8fff0];
+    game.audio.play('chime', 1);
+    this.fx.runeCircle(at, sp.color, { radius: 4.5, dur: 3.8, spin: 0.8 });
+    this.fx.glint(at.clone().setY(at.y + 1), sp.color, 3, 0.6);
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * TAU + r() * 0.6, d = i ? 1.5 + r() * 3.2 : 0;
+      const hit = V().set(at.x + Math.cos(a) * d, 0, at.z + Math.sin(a) * d);
+      hit.y = col.groundHeight(hit.x, hit.z, at.y + 4);
+      const start = hit.clone().add(V().set(9 + r() * 4, 32, -4 + r() * 8));
+      const c = palette[i % palette.length];
+      const star = this.starSprite(c, 0.9);
+      const delay = 0.2 + i * 0.4;
+      this.fx.add(star, delay + 0.75, (e, dt) => {
+        const k = Math.min(1, Math.max(0, (e.t - delay) / 0.75));
+        star.visible = e.t > delay;
+        if (!star.visible) return;
+        star.position.lerpVectors(start, hit, k * k);
+        star.userData.star.material.rotation += dt * 9;
+        // a comet tail of pixels and little stars
+        for (let j = 0; j < 3; j++) this.P.emit({ x: star.position.x + (r() - 0.5) * 0.3, y: star.position.y + (r() - 0.5) * 0.3, z: star.position.z + (r() - 0.5) * 0.3, vx: (r() - 0.5) * 0.6, vy: 0.4, vz: (r() - 0.5) * 0.6, drag: 1, life: 0.5 + r() * 0.5, size: j ? 0.12 : 0.3, color: new THREE.Color(palette[(i + j) % palette.length]), shape: j ? 'pixel' : 'star' });
+      });
+      if (i % 2 === 0) setTimeout(() => game.audio.play('chime', 0.25), delay * 1000);
+      setTimeout(() => {
+        if (!game.cell) return;
+        this.fx.impact(hit.clone().setY(hit.y + 0.5), { element: 'shock', color: c, radius: 2.4 });
+        this.sparkle(hit.clone().setY(hit.y + 0.4), palette, 30, 6, { up: true, lift: 2 });
+        game.playAt('shockCast', hit, 0.6);
+        for (const t of this.foesNear(hit, 3)) {
+          applyHit(t, { amount: sp.damage * mag, attacker: p, kind: 'spell', element: 'shock' });
+          this.knockback(t, hit, 1.5);
+        }
+        if (p.pos.distanceTo(hit) < 18) p.shake(0.16);
+      }, (delay + 0.75) * 1000);
+    }
+  }
+
+  /** The Founders' Light: a little blue-white star circles your head, lights the dark, and zaps the undead. */
+  founders_light(p, sp, mag) {
+    const game = this.game, cell = game.cell;
+    this.endFoundersLight();
+    game.audio.play('chime', 0.8);
+    const orb = this.starSprite(sp.color, 0.5);
+    const light = { color: new THREE.Color(0xd8ecff), intensity: 16, distance: 18, pos: V(), flicker: false, night: false, on: true };
+    cell.lights.push(light);
+    this.orb = { cell, light };
+    let tick = 0;
+    const palette = [0xcfe4ff, 0xffffff, 0xfff2b0];
+    this.fx.glint(p.center(V()).add(V().set(0, 1.2, 0)), sp.color, 2.4, 0.5);
+    this.fx.add(orb, sp.duration, (e, dt, k) => {
+      // it drifts lazily round you, a little above eye level and far enough out to be seen
+      const a = e.t * 0.9;
+      orb.position.set(p.pos.x + Math.cos(a) * 1.7, p.pos.y + 2.0 + Math.sin(e.t * 2.3) * 0.18, p.pos.z + Math.sin(a) * 1.7);
+      orb.userData.star.material.rotation += dt * 2.5;
+      const pulse = 0.85 + Math.sin(e.t * 6) * 0.15;
+      orb.userData.star.scale.setScalar(0.8 * pulse);
+      light.pos.copy(orb.position);
+      const fade = k > 0.92 ? (1 - k) / 0.08 : 1;
+      orb.userData.halo.material.opacity = 0.55 * fade;
+      orb.userData.star.material.opacity = fade;
+      if (r() < dt * 14) this.P.emit({ x: orb.position.x, y: orb.position.y, z: orb.position.z, vx: (r() - 0.5) * 0.5, vy: -0.4, vz: (r() - 0.5) * 0.5, gravity: 0.4, life: 1.1, size: r() < 0.3 ? 0.24 : 0.09, color: new THREE.Color(palette[Math.floor(r() * 3)]), shape: r() < 0.3 ? 'star' : 'pixel' });
+      if ((tick += dt) >= 1) {
+        tick = 0;
+        for (const c of this.foesNear(orb.position, 6)) {
+          if (!c.def?.undead) continue;
+          applyHit(c, { amount: sp.damage * mag, attacker: p, kind: 'spell', element: 'fire' });
+          this.lightning(orb.position.clone(), c.center(V()), sp.color, 0.18, 0.7);
+          this.fx.glint(c.center(V()), sp.color, 1.2, 0.35);
+          this.sparkle(c.center(V()), palette, 10, 3);
+        }
+      }
+      if (k >= 0.999) this.endFoundersLight();
+    });
+  }
+  endFoundersLight() {
+    if (!this.orb) return;
+    const i = this.orb.cell.lights.indexOf(this.orb.light);
+    if (i >= 0) this.orb.cell.lights.splice(i, 1);
+    this.orb = null;
+  }
+
+  /** Hollow Step: step through the cold, the way the Hollow King does. Flurries of snowflakes where you leave and land. */
+  hollow_step(p, sp, mag) {
+    const game = this.game, col = game.cell.collision;
+    const eye = p.eye(), dir = p.lookDir();
+    dir.y = Math.max(-0.3, Math.min(0.3, dir.y));
+    dir.normalize();
+    const end = eye.clone().addScaledVector(dir, 18);
+    const hit = col.segment(eye, end);
+    const dest = hit ? V().set(hit.point.x, hit.point.y, hit.point.z).addScaledVector(dir, -0.7) : end;
+    dest.y = col.groundHeight(dest.x, dest.z, dest.y + 0.5);
+    const palette = [0xd8f4ff, 0xffffff, 0x9ad8ff, 0xc8b8ff];
+    const burst = (at) => {
+      this.sparkle(at.clone().setY(at.y + 1), palette, 46, 5, { flakes: true, gravity: 1.5 });
+      this.fx.glint(at.clone().setY(at.y + 1.1), sp.color, 2.6, 0.5, 2);
+      this.fx.runeCircle(at, sp.color, { radius: 1.6, dur: 0.9 });
+      this.fx.flash(at.clone().setY(at.y + 1), sp.color, 35, 10, 0.4, false);
+      for (const c of this.foesNear(at, 3.2)) { applyHit(c, { amount: sp.damage * mag, attacker: p, kind: 'spell', element: 'frost' }); c.slowT = 4; }
+    };
+    // a ribbon of frost along the way you went
+    const from = p.pos.clone();
+    for (let i = 0; i < 24; i++) {
+      const q = from.clone().lerp(dest, i / 23);
+      this.P.emit({ x: q.x, y: q.y + 0.6 + r() * 0.9, z: q.z, vx: (r() - 0.5) * 0.4, vy: 0.2, vz: (r() - 0.5) * 0.4, gravity: 0.5, life: 0.5 + r() * 0.5, size: i % 3 ? 0.1 : 0.22, color: new THREE.Color(palette[i % 4]), shape: i % 3 ? 'pixel' : 'flake' });
+    }
+    burst(from);
+    p.pos.copy(dest);
+    p.vel.set(0, 0, 0);
+    burst(dest);
+    game.audio.play('frostCast', 0.8);
+    game.audio.play('chime', 0.3);
+    game.camera.fov = game.settings.fov + 18;
+    game.camera.updateProjectionMatrix();
+    game.ui.screenFlash?.(sp.color);
+  }
+
+  /** The Ring of Rime: from the Hollow King's own grimoire. A ring of frost rolls outward to 14 m. */
+  ring_of_rime(p, sp, mag) {
+    const game = this.game, at = p.pos.clone(), col = game.cell.collision;
+    const T = magicTextures();
+    game.audio.play('frostCast', 1);
+    game.audio.play('thunder', 0.25);
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), addMat(0xd8f4ff, 0.9, T.ring));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(at.x, col.groundHeight(at.x, at.z, at.y + 1) + 0.12, at.z);
+    const hitSet = new Set();
+    const shard = new THREE.MeshStandardMaterial({ color: 0xe0f6ff, emissive: 0x60b0ff, emissiveIntensity: 0.9, roughness: 0.1, transparent: true, opacity: 0.9 });
+    const geo = new THREE.ConeGeometry(0.14, 1, 5); geo.translate(0, 0.5, 0);
+    const palette = [0xd8f4ff, 0xffffff, 0x9ad8ff];
+    let lastR = 0;
+    this.fx.glint(at.clone().setY(at.y + 1.2), sp.color, 3.4, 0.6, 2);
+    this.fx.add(ring, 1.3, (e, dt, k) => {
+      const R = 0.5 + k * 13.5;
+      ring.scale.setScalar(R);
+      ring.material.opacity = 0.9 * (1 - k * 0.7);
+      while (lastR < R) {
+        lastR += 1.1;
+        const n = Math.round(lastR * 2.4);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU + r() * 0.2, x = at.x + Math.cos(a) * lastR, z = at.z + Math.sin(a) * lastR;
+          const gy = col.groundHeight(x, z, at.y + 2);
+          // flakes and pixels skitter along the front of the ring
+          this.P.emit({ x, y: gy + 0.3, z, vx: Math.cos(a) * 2, vy: 1 + r() * 1.5, vz: Math.sin(a) * 2, gravity: 3, life: 0.6 + r() * 0.4, size: i % 2 ? 0.1 : 0.24, color: new THREE.Color(palette[i % 3]), shape: i % 2 ? 'pixel' : 'flake' });
+          if (r() < 0.5) continue;
+          const m = new THREE.Mesh(geo, shard);
+          m.position.set(x, gy - 0.05, z);
+          m.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4);
+          const h = 0.5 + r() * 0.8;
+          this.fx.add(m, 1.2, (e2, dt2, k2) => m.scale.set(1, Math.max(0.01, (k2 < 0.15 ? k2 / 0.15 : k2 > 0.75 ? (1 - k2) / 0.25 : 1) * h), 1));
+        }
+      }
+      for (const c of this.foesNear(at, R + 0.5)) {
+        if (hitSet.has(c)) continue;
+        hitSet.add(c);
+        applyHit(c, { amount: sp.damage * mag, attacker: p, kind: 'spell', element: 'frost' });
+        c.slowT = 6;
+        if (c.anim) c.anim.stagger = 1;
+        this.fx.glint(c.center(V()), sp.color, 1.4, 0.4);
+        this.sparkle(c.center(V()), palette, 12, 3, { flakes: true });
+      }
+    });
+    this.fx.flash(at.clone().setY(at.y + 1), sp.color, 60, 20, 0.8, false);
+    p.shake(0.3);
+  }
+
+  /** The Founders' Ward: the sun, the moon and the star circle you; the dead that strike you are burned. */
+  founders_ward(p, sp) {
+    const game = this.game;
+    game.audio.play('chime', 1);
+    game.audio.play('heal', 0.5);
+    p.effects.shield = 50; p.effects.shieldT = sp.duration;
+    p.effects.wardT = sp.duration;
+    const g = new THREE.Group();
+    const lights = [0xffd860, 0xc8dcff, 0xffffff].map((c, i) => {
+      const s = this.starSprite(c, 0.32);
+      g.add(s);
+      return { s, a: (i / 3) * TAU, c: new THREE.Color(c) };
+    });
+    this.fx.add(g, sp.duration, (e, dt, k) => {
+      g.position.copy(p.pos);
+      for (const L of lights) {
+        L.a += dt * 2.2;
+        L.s.position.set(Math.cos(L.a) * 1.1, 1.1 + Math.sin(e.t * 3 + L.a) * 0.25, Math.sin(L.a) * 1.1);
+        L.s.userData.star.material.rotation += dt * 3;
+        if (r() < dt * 12) this.P.emit({ x: g.position.x + L.s.position.x, y: g.position.y + L.s.position.y, z: g.position.z + L.s.position.z, vx: 0, vy: 0.15, vz: 0, life: 0.7, size: 0.09, color: L.c, shape: 'pixel' });
+      }
+      g.visible = p.effects.wardT > 0;
+    });
+    this.fx.runeCircle(p.pos.clone(), sp.color, { radius: 1.8, dur: 1.4 });
+    this.fx.glint(p.center(V()).add(V().set(0, 0.6, 0)), sp.color, 2.8, 0.6);
+    this.sparkle(p.center(V()), [0xffd860, 0xc8dcff, 0xffffff], 36, 4, { gravity: 1 });
+    game.ui.screenFlash?.(sp.color);
+  }
+
   update(dt) {
     const game = this.game, p = game.player;
     if (!p || !game.cell) return;
@@ -815,6 +1034,7 @@ export class Spellbook {
       if (!p.onGround && r() < dt * 8) this.P.emit({ x: p.pos.x + (r() - 0.5), y: p.pos.y, z: p.pos.z + (r() - 0.5), vx: (r() - 0.5) * 0.5, vy: -0.3, vz: (r() - 0.5) * 0.5, gravity: 0.3, life: 2.5, size: 0.12, color: new THREE.Color(1, 1, 1), alpha: 0.9 }, false);
     }
     if (ef.nightEyeT > 0) ef.nightEyeT -= dt;
+    if (ef.wardT > 0) ef.wardT -= dt;
     if (ef.boundT > 0) {
       ef.boundT -= dt;
       if (ef.boundT <= 0) {
@@ -835,6 +1055,7 @@ export class Spellbook {
   }
 
   clear() {
+    this.endFoundersLight();
     for (const m of this.missiles) this.game.scene.remove(m.g);
     this.missiles = [];
     this.markRune = null;

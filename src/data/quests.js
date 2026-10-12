@@ -330,6 +330,66 @@ QUESTS.sq_cat5 = {
   },
 };
 
+// ---- The Hollow King (the Mages Guild of Chorrol)
+const GUILD = { cell: 'mages_guild', world: { x: LOCATIONS.chorrol.x + 15, z: LOCATIONS.chorrol.z + 44 } };
+const ONDINE = { ...GUILD, npc: ['ondine', 'ondine_follow'] };
+const STARFALL = () => ({ cell: 'starfall_observatory', world: LOCATIONS.starfall });
+const GATE = () => ({ world: LOCATIONS.hollow_gate });
+QUESTS.sq_mg1 = {
+  name: 'The Sealed Hall',
+  stages: {
+    10: { text: 'The Chorrol Mages Guild has been sealed behind a ward for nine days. Teekeeus gave me a Ward-Token that will let me through, and a crate of supplies for the people stuck inside.', target: ONDINE },
+    20: { text: 'Inside the Guild hall it is freezing. The Founders\' Pool in the floor has frozen into black ice, an apprentice named Bastien is missing, and the three Warding Lamps round the pool have gone out. They will not light from an ordinary flame.', target: { ...GUILD, npc: 'merle' } },
+    30: { text: 'Merle says the lamps are lit by the founders\' rite, written in the Charter of the Chorrol Chapter. The Charter is kept in the Magister\'s study, behind a locked gate. Magister Vell has the key.', target: { ...GUILD, item: 'guild_charter' } },
+    40: { text: 'The Charter: wake the lamps in the order the sky wakes, the Sun (east of the pool), then the Moon (west), then the Star (north), each with a flame I make myself: a lit torch, or a Flare.', target: GUILD },
+    50: { text: 'The three lamps burn and the Founders\' Flame has woken in the pool, blue-white and roaring. For a moment, in the flame, a crowned skeleton looked up at me. Magister Vell will want to know.', target: ONDINE },
+    100: { text: 'Magister Ondine Vell told me about Severin Ashgrave, the Chapter\'s first Magister, who made himself a lich and was sealed under the Jerall four hundred years ago, and about the three Hearts that keep him alive. She gave me an ember of the Founders\' Flame in a lantern, made me an Associate of the Guild, and asked me to find Bastien. He was obsessed with the old Starfall Observatory in the mountains north of Snikkit\'s Den.', done: true },
+  },
+};
+QUESTS.sq_mg2 = {
+  name: 'Starfall',
+  stages: {
+    10: { text: 'Find the apprentice Bastien Lorne at the Starfall Observatory, an old Guild tower high on the mountains north of the Wintersmeet road.', target: STARFALL() },
+    20: { text: 'Bastien was here, and not long ago. His bedroll and papers are scattered round a great cracked orrery. The dead in the tower have been dead a long time.', target: { cell: 'starfall_observatory' } },
+    30: { text: 'The Seal-Orrery: three of its nine spheres are black ice, and a brass dial reads ASHGRAVE — 3 — UNBROKEN. The founders built this place to keep watch on the three Hearts. Bastien must have left notes.', target: { cell: 'starfall_observatory', item: 'bastien_notes' } },
+    40: { text: 'Bastien\'s notebook ends in a cipher of interlocking rings. Aldous Quillwhistle in Chorrol knows more strange old magic than anyone; perhaps he can read it.', target: { npc: 'aldous', cell: 'quill_spire', world: { x: LOCATIONS.chorrol.x - 55, z: LOCATIONS.chorrol.z + 52 } } },
+    50: { text: 'Aldous read it: "The Spire, the Ruin, the Hollow. Fetch my hearts and I will teach you everything." Bastien was not taken. He is fetching the Hollow King\'s Hearts. Magister Vell has to know.', target: ONDINE },
+    100: { text: 'Bastien is the lich\'s courier. Magister Vell took it very quietly. She taught me Sunbolt, a white fire the dead cannot abide, and named the three hiding places: the Rime Spire, Vilverin, and Frostfang Hollow.', done: true },
+  },
+};
+QUESTS.sq_mg3 = {
+  name: 'Three Hearts',
+  stages: {
+    10: { text: 'Three founders hid Ashgrave\'s three Hearts: Hrolfa Stonevoice in the Rime Spire, Thalindor in the Ayleid ruin of Vilverin, Ilsabet Corve in a cave the Frostfang goblins live in now. I must reach them before Bastien does, and break each one by holding it up while the Founders\' Ember burns.', target: { world: LOCATIONS.rime_spire } },
+    20: { text: 'One of the three Hearts is accounted for. Two remain: the Rime Spire, Vilverin, Frostfang Hollow.', target: { world: LOCATIONS.vilverin } },
+    30: { text: 'Two of the three Hearts are accounted for. One remains.', target: { world: LOCATIONS.frostfang_hollow } },
+    40: { text: 'All three Hearts are accounted for: two broken, and the third already in Bastien\'s hands, carried north-east toward his master. Magister Vell must hear it.', target: ONDINE },
+    100: { text: 'Magister Vell knows the founders\' rite to open the Hollow Gate, under the north-east Jerall past Frostfang Hollow. She is coming with me. "I made that boy an apprentice. I will bring him home or I will bury him myself."', done: true },
+  },
+};
+QUESTS.sq_mg4 = {
+  name: 'The Hollow Road',
+  stages: {
+    10: { text: 'With Magister Vell at my side, go to the Hollow Gate, the door of black ice under the north-east Jerall, beyond Frostfang Hollow.', target: GATE() },
+    20: { text: 'The Hollow Gate stands open. Below it are the halls where the founders sealed Severin Ashgrave.', target: { cell: 'hollow_gate_hall', world: LOCATIONS.hollow_gate } },
+    30: { text: 'The founders\' old camp, and Ilsabet Corve\'s last words. The way goes down the Bone Stair.', target: { cell: 'bone_stair' } },
+    40: { text: 'Bastien is on the Bone Stair, kneeling by a fire of blue cold, the last Heart in his hands. He has been told to wait for me.', target: { cell: 'bone_stair', npc: 'bastien' } },
+    60: { text: 'Bastien is dead. The last Heart is mine.', target: { cell: 'bone_stair' } },
+    70: { text: 'Bastien has come back to himself. He will come with me to the end.', target: { cell: 'bone_stair' } },
+    100: { text: 'At the bottom of the Bone Stair the doors of the Hollow King\'s hall opened to the Founders\' Ember.', done: true },
+  },
+};
+QUESTS.sq_mg5 = {
+  name: 'The Hollow King',
+  stages: {
+    10: { text: 'Severin Ashgrave, the Hollow King, waits on his throne under the mountain. Three pillars of ward-light shield him; they can be shattered.', target: { cell: 'ashgrave_throne', npc: 'hollow_king' } },
+    20: { text: 'The Hollow King has risen from his throne.', target: { cell: 'ashgrave_throne', npc: 'hollow_king' } },
+    30: { text: 'Severin Ashgrave is gone. His crown of black ice lies cracked on the throne steps, and a crack of daylight has opened in the hall\'s wall.', target: { cell: 'ashgrave_throne', item: 'hollow_crown' } },
+    40: { text: 'It is over. Magister Vell will be waiting in the Guild hall in Chorrol.', target: ONDINE },
+    100: { text: 'The Founders\' Pool has thawed and shows only the sky. I am Magister of the Chorrol Chapter of the Guild of Mages, and the Magister\'s study is mine.', done: true },
+  },
+};
+
 export class QuestLog {
   constructor() {
     this.stages = {};

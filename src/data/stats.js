@@ -182,7 +182,7 @@ export function createCharacter({ name = 'Prisoner', race = 'imperial', cls = 'w
     skills,
     skillXp,
     majors: [...C.majors],
-    levelProgress: 0, // major skill increases this level
+    levelProgress: 0, // skill increases toward the next level (every skill counts)
     attrIncreases: Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])),
     magickaBonus: (R.magickaBonus || 0) + (B.magicka || 0),
     healthLevelBonus: 0,
@@ -206,7 +206,8 @@ export function carryWeight(ch) {
 }
 export function magickaRegen(ch) {
   if (BIRTHSIGNS[ch.sign]?.stuntedMagicka) return 0;
-  return maxMagicka(ch) * (0.0075 + ch.attrs.willpower * 0.0002);
+  // three times Oblivion's rate: magic should be something you get to use, not ration
+  return maxMagicka(ch) * (0.0075 + ch.attrs.willpower * 0.0002) * 3;
 }
 export function fatigueRegen(ch) {
   return 6 + ch.attrs.endurance * 0.08;
@@ -222,12 +223,34 @@ export function jumpVelocity(ch) {
 export function skillXpNeeded(ch, skill) {
   const lvl = ch.skills[skill];
   const major = ch.majors.includes(skill);
-  return (2 + lvl * 0.2) * (major ? 0.75 : 1.25);
+  return (2 + lvl * 0.2) * (major ? 0.75 : 1.0);
 }
 
 /**
+ * Leveling, Skyrim-style and gentle: every skill increase, major or minor, counts toward the next level.
+ * Level 1 → 2 takes 7 increases, and each level after takes two more.
+ */
+export function levelNeeded(ch) {
+  return 5 + ch.level * 2;
+}
+/** What each attribute does, for the level-up screen. */
+export const ATTR_HINT = {
+  strength: 'Melee damage and how much you can carry',
+  intelligence: 'Maximum Magicka',
+  willpower: 'Magicka and Fatigue regeneration',
+  agility: 'Archery, sneaking and staying on your feet',
+  speed: 'How fast you run',
+  endurance: 'Maximum Health, now and with every level',
+  personality: 'How much people like you; better prices',
+  luck: 'A little better at everything',
+};
+/** Points added to the attribute you choose at each level, and Health everyone gains. */
+export const LEVEL_ATTR_GAIN = 5;
+export const LEVEL_HEALTH_GAIN = 10;
+
+/**
  * Award skill experience. Returns array of events: {type:'skill', skill, value} and
- * {type:'levelReady'} when 10 major increases have accumulated.
+ * {type:'levelReady'} when enough skill increases have accumulated for the next level.
  */
 export function exerciseSkill(ch, skill, amount = 1) {
   const events = [];
@@ -238,16 +261,14 @@ export function exerciseSkill(ch, skill, amount = 1) {
     ch.skills[skill] += 1;
     ch.attrIncreases[SKILLS[skill][1]] += 1;
     events.push({ type: 'skill', skill, value: ch.skills[skill] });
-    if (ch.majors.includes(skill)) {
-      ch.levelProgress += 1;
-      if (ch.levelProgress === 10) events.push({ type: 'levelReady' });
-    }
+    ch.levelProgress += 1;
+    if (ch.levelProgress === levelNeeded(ch)) events.push({ type: 'levelReady' });
   }
   return events;
 }
 
 export function canLevelUp(ch) {
-  return ch.levelProgress >= 10;
+  return ch.levelProgress >= levelNeeded(ch);
 }
 
 /** Oblivion's attribute multiplier from governed skill increases. */
@@ -259,19 +280,16 @@ export function attributeBonus(increases) {
   return 5;
 }
 
-/** Apply a level-up with three chosen attributes. Luck always gets +1 extra if not chosen. */
+/** Apply a level-up: one chosen attribute gains LEVEL_ATTR_GAIN, and everyone gains Health. */
 export function applyLevelUp(ch, chosen) {
   if (!canLevelUp(ch)) throw new Error('Not ready to level');
-  if (chosen.length !== 3 || new Set(chosen).size !== 3) throw new Error('Choose three distinct attributes');
-  const gains = {};
-  for (const a of chosen) {
-    const bonus = a === 'luck' ? 1 : attributeBonus(ch.attrIncreases[a]);
-    gains[a] = Math.min(bonus, 100 - ch.attrs[a]);
-    ch.attrs[a] += gains[a];
-  }
+  const a = Array.isArray(chosen) ? chosen[0] : chosen;
+  if (!ATTRIBUTES.includes(a) || (Array.isArray(chosen) && chosen.length !== 1)) throw new Error('Choose one attribute');
+  const gains = { [a]: Math.min(LEVEL_ATTR_GAIN, 100 - ch.attrs[a]) };
+  ch.attrs[a] += gains[a];
+  ch.levelProgress -= levelNeeded(ch);
   ch.level += 1;
-  ch.levelProgress -= 10;
-  ch.healthLevelBonus += Math.floor(ch.attrs.endurance / 10);
+  ch.healthLevelBonus += LEVEL_HEALTH_GAIN + Math.floor(ch.attrs.endurance / 10);
   for (const a of ATTRIBUTES) ch.attrIncreases[a] = 0;
   ch.maxHealth = baseHealth(ch);
   return gains;

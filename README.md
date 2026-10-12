@@ -30,8 +30,10 @@ Click the game window to capture the mouse. Press **Esc** to pause.
 | C | Toggle sneak |
 | R | Ready / sheathe weapon |
 | F | First / third person (mouse wheel zooms) |
+| Hold V | Swing the camera round to look at yourself from the front |
+| U | Level up (when ready): choose an attribute |
 | Tab or I | Menus — K character, B magic, M map, J journal |
-| T | Wait (sleep in a bed to level up) |
+| T | Wait |
 | L | Light / douse your torch |
 | 1–8 | Hotkeys — hover an item or spell in the menu and press a number |
 | F5 / F9 | Quicksave / quickload |
@@ -55,7 +57,7 @@ Click the game window to capture the mouse. Press **Esc** to pause.
 
 **Interiors** — the Grey Mare inn, Northern Goods and Trade, Weynon House, the Vilverin dungeon and the Sigil Keep; plus the Deadlands beyond the Gate, with lava seas and a Sigil Tower venting fire into the sky.
 
-**Character** — 10 races, 10 classes, 13 birthsigns, 8 attributes and all 21 skills. Skills improve by use; ten major-skill increases let you level up by sleeping, choosing three attributes with Oblivion-style ×2–×5 multipliers.
+**Character** — 10 races, 10 classes, 13 birthsigns, 8 attributes and all 21 skills. Skills improve by use, and leveling works like Skyrim's, only gentler: **every** skill increase counts toward your next level (7 for level 2, two more for each level after). When you're ready, press U (or sleep) and choose one attribute to raise by 5; your Health rises by 10 with every level too. The inventory shows a portrait of your character standing in their current gear, with every hat and helmet on (drag it to turn them round).
 
 **Combat & magic** — melee with power attacks, blocking (shields block best), sneak attacks (×3 melee, ×2 bows), archery with draw strength, armour ratings, fatigue. Destruction, Restoration, Alteration, Conjuration, Illusion and Mysticism spells, plus once-a-day birthsign powers. Enemies: wolves, rats, mudcrabs, bandits (melee, archers, hedge wizards), goblins, skeletons, zombies, ghosts, scamps, clannfears and dremora — level-scaled, with summons, guards and fleeing townsfolk.
 
@@ -95,6 +97,10 @@ Every quest — stages, NPCs, locations, choices, rewards and flags — is docum
 
 **Questline: *The Admiral*** (five quests) — the crew of the *Herring* answer to **Admiral Marmalade**, a very fat orange cat in a tiny bicorne, and to Captain Rourke Gallowglass, who loves her more than the sea. Find her when she goes missing (bring a smoked herring); pass her three trials to join the crew (catch a golden sardine at dawn, sit perfectly still for 45 seconds while she sleeps on your lap, and win an insult duel with the Orc bosun); hold the beach when the drowned crew of the ghost ship *Dread Meringue* come out of the night fog and steal her; row out to the ghost ship with the Captain and settle things with Mother Brisk (three endings, one involving a very shy ghost cat); then come home for Naming Night, and a kitten of your own. Rewards include **Purrsuit**, a cutlass whose strikes startle foes into running.
 
+**Questline: *The Hollow King*** (the Mages Guild, five quests) — the Chorrol Guild hall has been sealed for nine days, and Teekeeus is selling spells in the rain. Carry a ward-token inside and relight the three Warding Lamps in the founders' order to wake the Founders' Flame in the frozen scrying pool, and learn why it has burned for four hundred years: Severin Ashgrave, the Chapter's first Magister, made himself a lich and was sealed under the Jerall Mountains with his soul split into three Hearts. Follow a missing apprentice to a ruined observatory in the snow; race him to the three Hearts (in the Rime Spire, in Vilverin, and in the goblins' stew-cooler at Frostfang Hollow) and break them in the Founders' Ember; open the Hollow Gate with the Magister's rite while the dead climb out of the snow; meet the boy on the Bone Stair (save him, win him over, or fight him); and end the Hollow King on his throne of black ice, with his ward-pillars, his Bone Knights and his very polite offer. Rewards: the Founders' Ember (a lantern the dead fear), **Sunbolt**, the **Crown of the Hollow King**, Summon Bone Knight, and the rank of Magister with your own study. Associates can buy the Guild's own spells from Merle: **Starfall**, **Founders' Light**, **Hollow Step**, **Founders' Ward**, and, for the Magister, the lich's **Ring of Rime**.
+
+**Quest guide** — [QUEST_GUIDE.md](QUEST_GUIDE.md) lists every quest, how to start it, and every stage of it.
+
 **Pets** — your dog (from *A Crown of Starflowers*) and your kitten follow you through every door, into every place, on fast travel and across saves. They can't be killed, only knocked down for a moment. Pet them to tell them to stay or come along.
 
 **Legendary arms** — five unique swords rest point-down in rune-ringed stone pedestals under columns of coloured light, and three unique armour sets stand on display deep in the dungeons. Every piece is sculpted onto the skeleton and has its own living effects.
@@ -109,6 +115,8 @@ Every quest — stages, NPCs, locations, choices, rewards and flags — is docum
 
 **Magic** — every elemental spell has its own look, in the storybook-night style of the sky: bolts carry a hot core inside a turning four-point star glint, fire trails a comet's tail of flame and chunky pixel embers and bursts into a crown of real flames; frost tumbles out snowflakes and shatters into ice shards under a spinning flake; lightning crackles with forking arcs and spits pixel sparks and star flickers that keep twinkling where it struck. The casting hand gathers the element (a flame, a snowflake or a ball of arcs) before it flies. Mages, Battlemages and Spellswords can conjure a **Bound Flame Blade** (sets foes burning) or a **Bound Storm Blade** (lightning leaps to a second foe), animated blades that light up the world around you; both are also sold among Aldous Quillwhistle's Wonders.
 
+**Magicka** regenerates three times faster than in Oblivion, so magic is something you use, not ration.
+
 **Money** — you start with 25 gold and earn more from loot, chests, selling to merchants, and quests: every quest you finish pays 100 gold on top of its own reward. Wildflowers (Starflower, St. Jahn's Wort, Lady's Mantle, Lady's Smock, Columbine Root) trade for a flat 20 gold each, and every spell in every shop (Teekeeus in Chorrol, and Aldous's Wonders) costs a flat 40 gold.
 
 **Systems** — topic-based dialogue with disposition, a persuasion mini-game and bribes; barter and a spell merchant; lockpicking mini-game; containers and theft; crime, bounty and guards ("Stop right there, criminal scum!") with fines, jail or resisting arrest; renting rooms; wait/sleep; compass with quest markers; parchment map with fast travel; journal; save/load (localStorage); generative music that shifts for combat, night, dungeons and Oblivion.
@@ -122,6 +130,7 @@ src/
   viewmodel.js       first-person arms and weapons
   combat.js          hostility, damage pipeline, projectiles
   admiral.js         the Brinewhistle Cove questline (mixed into game)
+  guild.js           the Mages Guild questline, The Hollow King (mixed into game)
   audio.js           synthesized SFX and generative music
   actors/            character kit (rigged CC0 models + clip state machine), procedural fallbacks, AI
   data/              rules (stats), items, spells, actors, dialogue, quests
