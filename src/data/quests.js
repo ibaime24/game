@@ -1,5 +1,5 @@
 // Quest definitions and the quest/journal manager.
-import { LOCATIONS } from '../world/layout.js';
+import { LOCATIONS, COVE } from '../world/layout.js';
 
 export const QUESTS = {
   mq_amulet: {
@@ -265,6 +265,68 @@ QUESTS.sq_moot = {
     10: { text: 'Eranwe Greenfletch, master of the bow in the Bosmer town of Falinor, has challenged me to the Chipmunk Moot: tag ten chipmunks with blunted arrows in the Tumbling Grove, west of town, before her song runs out. She gave me a practice bow and a quiver of blunted arrows. When I am ready, I should tell her so in the grove.', target: { ...GROVE, npc: 'eranwe' } },
     20: { text: 'Ten chipmunks tagged, and not one of them harmed — only deeply offended. Eranwe is waiting in the Tumbling Grove.', target: { ...GROVE, npc: 'eranwe' } },
     100: { text: 'I won the Chipmunk Moot. Eranwe taught me to call a Spirit Hart of the Greenheart — a deer of living light that follows me in battle and mends my wounds.', done: true },
+  },
+};
+
+// ---- The Admiral (Brinewhistle Cove, through the Smugglers' Cut south of Fort Sutch)
+const CUT = () => LOCATIONS.smugglers_cut;
+const CV = (p) => ({ cell: 'cove', x: p.x, z: p.z, world: CUT() });
+const CAPTAIN = { npc: ['gallowglass', 'gallowglass_pier'], cell: 'herring', world: CUT() };
+QUESTS.sq_cat1 = {
+  name: 'Cat Overboard',
+  stages: {
+    10: { text: 'A poster: LOST CAT. Answers to "Admiral". Does not answer. The reward is to be had from the Captain of the Indignant Herring, in Brinewhistle Cove, through the Smugglers\' Cut south of Fort Sutch.', target: CAPTAIN },
+    20: { text: 'Captain Rourke Gallowglass, terror of the Abecean Sea, has not eaten in two days. His cat, Admiral Marmalade, is missing. I should ask his crew who saw her last — Odette at the Salty Mitten, Grumm the bosun, J\'zhirr the navigator.', target: { npc: ['odette', 'grumm', 'grumm_inn', 'jzhirr', 'jzhirr_inn'], cell: 'salty_mitten', world: CUT() } },
+    30: { text: 'Odette saw the Admiral steal a whole smoked herring and waddle off west along the beach. She gave me a smoked herring of my own, "for luring". There are paw prints in the sand.', target: CV(COVE.nook) },
+    40: { text: 'The Admiral is in a sea arch on the west beach, sitting in an old rowboat on a heap of stolen wool. She will not be rushed. Perhaps a smoked herring would change her mind.', target: { ...CV(COVE.nook), npc: 'admiral' } },
+    50: { text: 'The Admiral ate the herring, slowly, while looking at me, and has decided to follow me. Under her, in the wool, was an old brass collar engraved CRUMPET — D. MERINGUE. I should take her home to the Indignant Herring.', target: CAPTAIN },
+    60: { text: 'The Admiral is home. The Captain will want to know.', target: CAPTAIN },
+    100: { text: 'I brought Admiral Marmalade home. The Captain wept with joy, then noticed she was sitting next to me instead of him, and sulked. He went very pale when he saw the brass collar, and would not say why. He says the crew will want me.', done: true },
+  },
+};
+QUESTS.sq_cat2 = {
+  name: 'Articles of the Admiral',
+  stages: {
+    10: { text: 'By the Articles of the Indignant Herring, a new hand must pass the Admiral\'s Three Trials: Tribute (J\'zhirr knows what she likes), Patience (ask Odette), and Tongues (Grumm the bosun). They can be done in any order.', target: { npc: ['jzhirr', 'jzhirr_inn', 'odette', 'grumm', 'grumm_inn'], cell: 'cove', world: CUT() } },
+    20: { text: 'One of the Admiral\'s three trials passed. Two to go: check the Articles for what remains.', target: { cell: 'cove', world: CUT() } },
+    30: { text: 'Two of the Admiral\'s three trials passed. One to go.', target: { cell: 'cove', world: CUT() } },
+    40: { text: 'All three of the Admiral\'s trials passed: tribute paid, patience proven, the bosun out-insulted. Captain Gallowglass will want to hear it.', target: CAPTAIN },
+    100: { text: 'I am a hand of the Indignant Herring, rank of Cat\'s-Paw. The Admiral tapped my boot with her paw, which the crew assures me is the highest honour in the Abecean. Afterwards the Captain stood a long time looking out to sea. "Fog\'s coming in," he said. "Haven\'t seen fog like that in forty years."', done: true },
+  },
+};
+QUESTS.sq_cat3 = {
+  name: 'The Fog Comes In',
+  stages: {
+    10: { text: 'The Captain is uneasy about the fog rolling in at night. I should stay in Brinewhistle Cove after dark and see what comes with it.', target: CV(COVE.fire) },
+    20: { text: 'A ship came out of the fog — a ship made of fog, with green lanterns — and the drowned are wading ashore. Hold the beach!', target: CV(COVE.fire) },
+    30: { text: 'We held the beach, but the Admiral is gone from her cushion. Wet prints lead from the Herring down into the sea. Something was left on her cushion.', target: { cell: 'herring', item: 'brisk_note', world: CUT() } },
+    35: { text: 'A soggy note: "CRUMPET — RETURNED TO HER CAPTAIN. — A. BRISK, CAPT., THE DREAD MERINGUE." One of the drowned lost his legs in the surf and is sitting in a barrel by the pier, apologising to everyone. He might know something.', target: { ...CV(COVE.barrel), npc: 'fennick' } },
+    40: { text: 'Fishbones Fennick says Mother Brisk thinks the Admiral is her own cat, Crumpet, who went down with the Dread Meringue forty years ago. A ginger cabin boy was meant to save her. The Captain went white when I mentioned the collar. I should talk to him.', target: CAPTAIN },
+    50: { text: 'The Captain was that cabin boy. Brisk put Crumpet in his arms when the Meringue struck the Gullstack, and in the black water she slipped away. The Meringue only shows in fog, and only to someone carrying a drowned light. Fennick\'s crew carried ghost-lanterns.', target: { ...CV(COVE.barrel), npc: 'fennick' } },
+    60: { text: 'Fennick lost his ghost-lantern when he washed up in the Drowned Grotto, the sea cave in the west cliffs — "on a rock, beside a lady of some size".', target: { cell: 'drowned_grotto', item: 'ghost_lantern', world: CUT() } },
+    70: { text: 'I have Fennick\'s Ghost-Lantern. It burns green and does not care about water. The Captain should see it.', target: CAPTAIN },
+    100: { text: 'The Captain took down his old cabin-boy\'s scarf from its nail and tied it on. "We row tonight." The jolly boat is ready at the end of the pier.', done: true },
+  },
+};
+QUESTS.sq_cat4 = {
+  name: 'The Dread Meringue',
+  stages: {
+    10: { text: 'Meet the Captain at the jolly boat at the end of the pier, after dark, with the Ghost-Lantern, and row out into the fog to the Dread Meringue.', target: { ...CV(COVE.jolly), npc: 'gallowglass_pier' } },
+    20: { text: 'We are aboard the Dread Meringue. Mother Brisk will be in her cabin at the stern, and the Admiral with her. The cabin will be locked; the Drowned Bosun carried Brisk\'s key.', target: { cell: 'meringue' } },
+    40: { text: 'Mother Brisk sits in her cabin with the Admiral on her lap. The Admiral looks extremely put out. I have to get her back — by finding Brisk\'s real cat, by letting Rourke speak, or by force.', target: { cell: 'meringue', npc: 'brisk' } },
+    60: { text: 'Mother Brisk is gone, scattered into sea-spray. The Admiral is free. I should pick her up and get us home.', target: { cell: 'meringue', npc: 'admiral' } },
+    70: { text: 'Mother Brisk has let go. Her crew have laid down their cutlasses. The Admiral is free — I should pick her up and get us home.', target: { cell: 'meringue', npc: 'admiral' } },
+    100: { text: 'We rowed home through the last of the fog with the Admiral riding on the Captain\'s shoulders. The fog will not come back.', done: true },
+  },
+};
+QUESTS.sq_cat5 = {
+  name: 'Naming Night',
+  stages: {
+    10: { text: 'The moment the boat touched the pier, the Admiral leapt off the Captain\'s shoulders and bolted. AGAIN. Grumm may have seen where she went.', target: { npc: ['grumm', 'grumm_inn'], cell: 'cove', world: CUT() } },
+    20: { text: 'Grumm says all his wool has gone, every scrap of it, and the paw prints lead back into the Indignant Herring.', target: { cell: 'herring', world: CUT() } },
+    30: { text: 'The Admiral is in the Captain\'s sea chest, on a nest of Grumm\'s wool — with four kittens. She wasn\'t lost. She was looking for somewhere safe. The Captain needs to see this.', target: CAPTAIN },
+    40: { text: 'The Captain has declared a Naming Night. The whole crew will gather at the bonfire on the beach at sundown — between seven and eleven in the evening.', target: CV(COVE.fire) },
+    100: { text: 'Naming Night. Fish stew, tiny jumpers, cannon fireworks, a skeleton singing in a barrel — and one of the Admiral\'s kittens chose me. The Captain gave me Purrsuit, his old cutlass.', done: true },
   },
 };
 

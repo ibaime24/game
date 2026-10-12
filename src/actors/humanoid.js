@@ -400,7 +400,9 @@ export function buildSkinnedQuadruped(opts = {}) {
   const vc = (g) => (g.attributes.color ? g : shadeBelly(g, -1e9, 0));
 
   // torso: long ellipsoid with a deeper chest
-  const torso = ellipsoid(1, H * 0.3, H * 0.33, L * 0.62, 0, H * 1.0, -L * 0.02, 20, 14);
+  // a well-fed animal (the Admiral) is wider and hangs lower in the belly
+  const fat = o.fat || 1;
+  const torso = ellipsoid(1, H * 0.3 * fat, H * 0.33 * (1 + (fat - 1) * 0.6), L * 0.62, 0, H * (1.0 - (fat - 1) * 0.08), -L * 0.02, 20, 14);
   const tp = torso.attributes.position;
   for (let i = 0; i < tp.count; i++) {
     const z = tp.getZ(i);
@@ -438,7 +440,9 @@ export function buildSkinnedQuadruped(opts = {}) {
     shin.translate(0, 0, z + (sz > 0 ? 0.01 : -0.02));
     add(fm, skin(vc(shin), knee, { to: hip, fn: (y) => smooth(yK - 0.03, yK + 0.05, y) * 0.5 }));
     const paw = ellipsoid(H * 0.07, 1, 0.55, 1.4, x, 0.03, z + H * 0.04, 8, 6);
-    add(fm, skin(vc(paw), knee));
+    // one white sock, front left
+    add(o.sock && li === 0 ? plainMat(0xf2eee6, 0.9) : fm, skin(vc(paw), knee));
+    if (o.sock && li === 0) add(plainMat(0xf2eee6, 0.9), skin(vc(limbGeo(x, yK * 0.55, 0.04, H * 0.066, H * 0.05, 8).translate(0, 0, z + 0.01)), knee));
   });
   // tail
   if (o.tail) {

@@ -1141,6 +1141,225 @@ DIALOGUE.falinor_folk = {
   topics: [...greenTopics, ...generic],
 };
 
+// ---------------------------------------------------------------- The Admiral (Brinewhistle Cove)
+const CQ = (g, q) => g.quests.stage(q);
+// Grumm's insults, and the retorts the rest of the crew will teach you (the last you earn on the Captain's armchair)
+export const INSULTS = [
+  { insult: 'My grandmother had a sharper wit than you, and she was a barnacle.', retort: 'That explains the family resemblance.', from: 'odette' },
+  { insult: 'I\'ve seen sardines with more courage than you!', retort: 'And you ate them all, by the look of you.', from: 'odette' },
+  { insult: 'When I\'m done with you, they\'ll use you as a mop!', retort: 'Good. Then this deck will finally get cleaned.', from: 'jzhirr' },
+  { insult: 'Your knots are so loose the tide unties them!', retort: 'At least my knots don\'t come with a pom-pom.', from: 'jzhirr' },
+  { insult: 'Not even the Admiral would sit on you!', retort: 'She did, this morning. Ask her.', from: 'lap' },
+];
+const COVE_RUMORS = [
+  'The Herring hasn\'t moved in eleven years. The Captain says she\'s "resting between voyages". The gulls say she\'s a house.',
+  'Never sit in the sunny spot on the Herring\'s rail. It\'s in the Articles. It\'s the most enforced article we have.',
+  'Fog over the Gullstack some nights. Green lights in it. Odette says it\'s marsh-gas. Odette says a lot of things in a very firm voice.',
+  'Don\'t go in the Drowned Grotto. There\'s a mudcrab in there the size of a rowboat. Grumm named her. Grumm names everything.',
+  'J\'zhirr navigates by the stars, he says. Mostly he navigates by naps.',
+];
+const learnRetorts = (g, from) => {
+  const known = (g.flags.retorts ||= []);
+  const fresh = INSULTS.map((x, i) => [x, i]).filter(([x, i]) => x.from === from && !known.includes(i));
+  for (const [, i] of fresh) known.push(i);
+  if (fresh.length) g.ui.notify(`Retort${fresh.length > 1 ? 's' : ''} learned.`);
+  return fresh.map(([x]) => `When he says: "${x.insult}"\nYou say: "${x.retort}"`).join('\n\n');
+};
+const crewChat = { id: 'rumors', label: 'Rumors', say: () => pick(COVE_RUMORS) };
+
+DIALOGUE.gallowglass = {
+  greeting: (g, npc) => {
+    if (npc.uid === 'gallowglass_pier') return '*The Captain stands at the end of the pier with his old cabin-boy\'s scarf knotted at his throat, staring into the fog.* Ready when you are, Cat\'s-Paw. The boat\'s the one with the cat painted on it. They all have cats painted on them. The small one.';
+    if (npc.uid === 'gallowglass_follow') return '*He keeps his voice low.* She\'s in the stern cabin. I can hear her. I\'d know that voice under the sea. I HAVE known it, under the sea, every night for forty years.';
+    const c1 = CQ(g, 'sq_cat1');
+    if (c1 < 20) return '*A big man in a magnificent red coat sits slumped at his chart table, the coat so thick with orange cat hair that it is mostly orange. His eyes are red. He is holding a very small hat.* Arr. Arrr. ...Sorry. I haven\'t slept. What d\'you want?';
+    if (c1 < 60) return pick(['Any sign of her? Any sign at all? I put her fish out. She didn\'t eat it. SOMEONE ate it. It was Grumm.', '*He is holding the tiny bicorne to his chest.* She\'s never been gone this long. Not even the time with the seagull.']);
+    if (CQ(g, 'sq_cat5') >= 30 && !g.flags.namingNightDone) return '*He is crouched by the sea chest, enormous and tearful, making small noises at the kittens.* Four of them. FOUR. Look at their little FEET.';
+    if (g.flags.namingNightDone) return pick(['Cat\'s-Paw! The Admiral\'s asleep on the rail and the kittens are asleep on the Admiral. It\'s the best day of my life. Every day is, now.', 'Arr. That\'s a happy "arr". You can tell by the beard.']);
+    if (CQ(g, 'sq_cat3') >= 30 && CQ(g, 'sq_cat4') < 100) return '*He has not taken off his coat. He has not sat down. He looks out of the porthole at the fog.* She\'s out there. I know where she is. I\'ve always known where she is.';
+    return pick(['Ahoy, Cat\'s-Paw. The Admiral\'s on the rail, the sun\'s out, and the sea\'s exactly where I left it.', '*He is brushing the Admiral, who is pretending not to enjoy it.* Who\'s a terror of the Abecean? Who\'s a FEARSOME little — oh, it\'s you. Arr.']);
+  },
+  topics: [
+    { id: 'admiral', label: 'The Admiral', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat1') < 20,
+      say: (g) => {
+        if (CQ(g, 'sq_cat1') < 10) g.quests.set('sq_cat1', 10, g.day());
+        g.quests.set('sq_cat1', 20, g.day());
+        return 'Admiral Marmalade. Commander of the Indignant Herring, by the Articles. Orange. Dignified. Large — don\'t tell her I said large. Two days gone. TWO DAYS. I\'ve not eaten. I\'ve not slept. I threatened to keelhaul the sea, and the sea just sat there.\n\n*He wipes his nose on a sleeve that leaves an orange streak.* Ask the crew who saw her last. Odette\'s at the Mitten, Grumm\'ll be on the beach knitting, and J\'zhirr\'s up by the lighthouse "navigating". Find her and there\'s a reward. A big one. I\'ll think of what.';
+      } },
+    { id: 'back', label: 'She\'s back', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat1') === 60,
+      say: (g) => {
+        g.ui.queueAfterDialogue = () => g.admiralComesHome();
+        return '*He lets out a noise no pirate has made before or since and gets down on his knees on the planks.* ADMIRAL! Oh, you terrible, wonderful — come here — come to — *The Admiral walks past his outstretched arms and sits down on your foot.*\n\n*A long silence.*\n\nEleven years. ELEVEN YEARS I\'ve fed you. *He stands, with great dignity, and does not look at you.* ...Fine. FINE. She likes you. Marvellous.\n\n*Then he sees the collar in your hand, and all the colour goes out of his face.* Where did you — no. Never mind. I don\'t want to know. Put that away.\n\n*He counts out fifty septims, very carefully, the way a man counts when he\'s thinking about something else.* Your reward. And — since she\'ll sit by you — the crew\'ll want you. Read the Articles. All of them. Especially seven.';
+      } },
+    { id: 'trials', label: 'The Three Trials', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat2') >= 10 && CQ(g, 'sq_cat2') < 40,
+      say: (g) => {
+        const left = [!g.flags.trialSardine && 'TRIBUTE — the Admiral eats one thing as tribute, and J\'zhirr knows what it is', !g.flags.trialLap && 'PATIENCE — ask Odette, and mind my armchair', !g.flags.trialTongues && 'TONGUES — beat Grumm at insult duelling, which nobody has done since the Siege of Anvil Docks'].filter(Boolean);
+        return 'Article Twelve. The Admiral\'s trials. She set them herself — well, I wrote them down, but she was there, and she didn\'t object, which is how she signs things.\n\nStill to do:\n — ' + left.join(';\n — ') + '.';
+      } },
+    { id: 'done', label: 'The trials are done', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat2') === 40,
+      say: (g) => {
+        g.ui.queueAfterDialogue = () => g.catsPawCeremony();
+        return '*He actually smiles.* All three? Tribute paid, patience proven, and Grumm out-insulted? Grumm\'s been sulking on the beach for an hour. That\'s how I knew.\n\nThen it\'s official. All hands! ALL HANDS! *Nobody comes. He clears his throat.* ...The Admiral will see you on deck.';
+      } },
+    { id: 'collar', label: 'The brass collar', show: (g, npc) => npc.uid === 'gallowglass' && g.player.inventory.has('crumpet_collar') && CQ(g, 'sq_cat3') < 40,
+      say: () => '*He doesn\'t look at it.* It\'s an old collar. The sea throws up old things. There\'s nothing to — I said put it AWAY, Cat\'s-Paw. *Then, quieter:* Please.' },
+    { id: 'fog', label: 'The fog', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat3') >= 10 && CQ(g, 'sq_cat3') < 20,
+      say: () => 'It comes in after dark, off the Gullstack. Smells of wet rope and old pipe smoke. I\'ve only smelled that once before. *He looks at the Admiral, then at the door, then at the Admiral.* Stay the night in the cove, would you? Humour an old sailor. I\'d feel better with a Cat\'s-Paw on the beach.' },
+    { id: 'brisk', label: 'Mother Brisk', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat3') === 40,
+      say: (g) => {
+        g.quests.set('sq_cat3', 50, g.day());
+        return '*He sits down very slowly, the way a ship settles on a sandbar.* Fennick\'s right. A ginger lad, and he cried a great deal. It was me.\n\nI was twelve. Cabin boy on the Dread Meringue, Mother Brisk\'s ship. Best captain on the Abecean, and she had a cat — Crumpet — orange as a sunset, with one white sock, and meaner than a customs officer. The night we hit the Gullstack, Mother put Crumpet in my arms and said, "Get her to the jolly boat, Rourke. Don\'t you let go."\n\n*His big hands open and close on nothing.* The water was black and cold, and she was fighting me, and I... I let go. I felt her go. I made the boat. Nobody else did.\n\nForty years I\'ve kept orange cats. I tell myself it\'s because I like them. *He laughs, wetly.* The Meringue only sails in fog, and you can\'t see her at all without a drowned light. Her crew carried ghost-lanterns. Green ones. Ask the skeleton — he\'ll know where his went.';
+      } },
+    { id: 'lantern', label: 'The ghost-lantern', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat3') === 70,
+      say: (g) => {
+        g.quests.set('sq_cat3', 100, g.day());
+        g.flags.jollyReady = true;
+        g.quests.set('sq_cat4', 10, g.day());
+        g.applyCoveWorld?.();
+        return '*He looks at the green flame for a long while. Then he reaches up to a nail over the chart table, where a faded blue scarf has hung for so long it has a shape, and ties it round his throat with a sailor\'s knot.*\n\nI\'m not twelve any more. We row tonight. Meet me at the jolly boat at the end of the pier after dark, and bring that light. *He tries to say something else, and settles for:* Arr.';
+      } },
+    { id: 'row', label: 'Let\'s row out', show: (g, npc) => npc.uid === 'gallowglass_pier' && CQ(g, 'sq_cat4') >= 10 && CQ(g, 'sq_cat4') < 100,
+      say: (g) => g.player.inventory.has('ghost_lantern') ? 'Then get in the boat. You row. I\'ll hold the lantern up and try not to be sick. A pirate captain who gets seasick. Don\'t tell the crew. The crew know.' : 'Not without the ghost-lantern, Cat\'s-Paw. We\'d row in circles till dawn.' },
+    { id: 'kittens', label: 'Kittens!', show: (g, npc) => npc.uid === 'gallowglass' && CQ(g, 'sq_cat5') === 30,
+      say: (g) => {
+        g.quests.set('sq_cat5', 40, g.day());
+        return '*He is already crying.* She wasn\'t lost. Either time. She was looking for somewhere SAFE. In MY sea chest. On Grumm\'s wool. Oh, he\'s going to be unbearable about this.\n\n*He stands up and wipes his face with the whole of his sleeve.* There\'ll be a Naming Night. Tonight, at the fire on the beach, at sundown — between seven and eleven. The whole crew. Every last hand, and the skeleton. And you\'ll stand at the front, Cat\'s-Paw. That\'s an order. From me. Not from her. She\'s busy.';
+      } },
+    { id: 'herring', label: 'The Indignant Herring', show: (g, npc) => npc.uid === 'gallowglass',
+      say: () => 'Finest ship on the Abecean, once. Ran aground eleven years ago in a fog, chasing a merchant cog that turned out to be a whale. We\'ve been "refitting" since. *He pats the hull.* She\'ll sail again. When the Admiral says so.' },
+    crewChat,
+  ],
+};
+
+DIALOGUE.odette = {
+  greeting: (g) => {
+    if (CQ(g, 'sq_cat1') >= 20 && CQ(g, 'sq_cat1') < 30) return '*A tall Redguard woman stirs an enormous pot with — you look twice — a ladle where her left hand should be. The right is a hook.* You\'re looking for the cat. Everyone is looking for the cat. Sit down, have some stew, and I\'ll tell you about the cat.';
+    return pick(['Stew\'s on. Stew\'s always on. Don\'t ask what\'s in it, and I won\'t ask what you\'ve been fighting.', '*She raps the counter with her ladle.* Two-Hooks Lark. First mate, cook, and the only one here who can read a tide table.', 'Wipe your boots. This was a ship before it was a tavern, and it was a tidy ship.']);
+  },
+  topics: [
+    { id: 'seen', label: 'Have you seen the Admiral?', show: (g) => CQ(g, 'sq_cat1') >= 20 && CQ(g, 'sq_cat1') < 30,
+      say: (g) => {
+        g.quests.set('sq_cat1', 30, g.day());
+        g.giveItem('smoked_herring', 1);
+        g.applyCoveWorld?.();
+        return 'Seen her? She robbed me. Day before yesterday, bold as brass — hopped on the galley table, took a whole smoked herring in her jaws, looked me in the eye, and waddled out the door with it. West, along the beach. Took her a quarter of an hour to get out of sight.\n\n*She hooks a second herring off the rack and hands it to you.* Here. For luring. She\'ll come to fish when she won\'t come to the Captain. Look for the prints in the sand past the last shack.';
+      } },
+    { id: 'more', label: 'Another smoked herring?', show: (g) => CQ(g, 'sq_cat1') >= 30 && CQ(g, 'sq_cat1') < 50 && !g.player.inventory.has('smoked_herring'),
+      say: (g) => { g.giveItem('smoked_herring', 1); return '*She sighs and hooks down another.* That\'s the last free one. After that it\'s three septims, same as the gulls pay.'; } },
+    { id: 'lap', label: 'The Lap', show: (g) => CQ(g, 'sq_cat2') >= 10 && CQ(g, 'sq_cat2') < 100 && !g.flags.trialLap,
+      say: () => 'The Trial of Patience. Simplest thing in the world, and nobody can do it. Go into the Herring, sit in the Captain\'s armchair, and wait for the Admiral to choose your lap. She will. Then you hold still while she goes to sleep.\n\nAnd I mean STILL. You twitch, you scratch, you so much as think about your dinner, and she\'s off, and she\'ll hold it against you. Grumm tried eleven times. He sneezed.' },
+    { id: 'insults', label: 'Insults', show: (g) => CQ(g, 'sq_cat2') >= 10 && !g.flags.trialTongues,
+      say: (g) => {
+        const t = learnRetorts(g, 'odette');
+        return t ? '*She leans on the counter.* Duelling Grumm? Then you\'ll want ammunition. He always opens with his grandmother, and he always does the sardine one when he\'s losing.\n\n' + t + '\n\nJ\'zhirr knows a couple more, if you can keep him awake long enough.' : 'I\'ve told you all mine. J\'zhirr has the rest. And for the last one — well. Sit in the Captain\'s chair and you\'ll find out.';
+      } },
+    { id: 'hooks', label: 'Your hooks', say: () => '*She holds up the ladle.* Lost the hand to a shark off Stros M\'Kai. Lost the other to a different shark off Stros M\'Kai. Same day. I don\'t go to Stros M\'Kai any more. The Captain had the ladle made for me. Best present I ever got.' },
+    { id: 'captain', label: 'The Captain', say: () => 'Rourke Gallowglass is the softest man who ever flew a black flag. He once surrendered a whole prize ship because the merchant captain\'s cat looked sad. Don\'t tell him I said so. Don\'t tell him I said "once", either.' },
+    crewChat,
+  ],
+};
+
+DIALOGUE.grumm = {
+  greeting: (g) => {
+    if (g.flags.trialTongues) return pick(['*He is knitting furiously.* Don\'t talk to me. I\'m knitting my feelings.', 'Rematch. Some day. When I\'ve thought of better ones. ...I\'ve been thinking for a week.']);
+    return pick(['*A huge Orc sits on an upturned boat, knitting something very small and very orange.* Mind the wool.', 'Grumm gro-Shank. Bosun. Undefeated insult champion of the Abecean Sea. Also I knit.', '*He holds up a tiny jumper.* For the Admiral. She won\'t wear it. She never wears them. I keep making them.']);
+  },
+  topics: [
+    { id: 'seen', label: 'Have you seen the Admiral?', show: (g) => CQ(g, 'sq_cat1') >= 20 && CQ(g, 'sq_cat1') < 60,
+      say: () => 'Not since the day before yesterday. She\'s been funny lately. Fat — fatter — and grumpy, and sleeping in odd places. In the bread oven. In my boot. And she keeps pulling the wool out of my basket and running off with it. Half a skein of good Skingrad orange, gone.\n\n*He frowns at the basket.* You don\'t think she\'s taken up knitting?' },
+    { id: 'duel', label: 'The insult duel', show: (g) => CQ(g, 'sq_cat2') >= 10 && !g.flags.trialTongues,
+      say: () => 'The gentleperson\'s swordfight. No blades, no blood — just wit. I insult you, you answer. Good answer and the insult bounces off. Bad answer and you\'re done. Three in a row and you beat me, which you won\'t.\n\nI\'m not teaching you any answers, mind. That\'d be cheating. Ask around. Then come back and say "I challenge you", if you dare.' },
+    { id: 'challenge', label: 'I challenge you!', show: (g) => CQ(g, 'sq_cat2') >= 10 && !g.flags.trialTongues,
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.insultDuel(npc);
+        return '*He puts down his knitting, cracks his knuckles one at a time, and stands up, and up, and up.* On guard.';
+      } },
+    { id: 'gone', label: 'The Admiral\'s run off again', show: (g) => CQ(g, 'sq_cat5') === 10,
+      say: (g) => {
+        g.quests.set('sq_cat5', 20, g.day());
+        return '*He is staring into his basket.* All my wool\'s gone. ALL of it. Every skein. Even the stripy one I was saving.\n\n*He points, mournfully, at a trail of orange fluff and little paw prints leading straight back up the beach and in through the door of the Herring.* She went that way. With my stripy one.';
+      } },
+    { id: 'knitting', label: 'Your knitting', say: () => 'My mum taught me. Orcs knit, you know. Long winters in the Wrothgarians. You either knit or you fight, and you can\'t fight all winter. *He holds up something orange with four sleeves.* That\'s a jumper for the Admiral. Four sleeves. Took a while to work out.' },
+    crewChat,
+  ],
+};
+
+DIALOGUE.jzhirr = {
+  greeting: (g) => pick(['*A lean Khajiit lies on the lighthouse steps with his eyes closed and a sextant on his chest.* This one is navigating. Do not disturb.', 'You want the cat? Everyone wants the cat. No one wants J\'zhirr. J\'zhirr is ALSO a cat.', '*He opens one eye.* The stars are where they were. The sea is where it was. Navigation complete.']),
+  topics: [
+    { id: 'seen', label: 'Have you seen the Admiral?', show: (g) => CQ(g, 'sq_cat1') >= 20 && CQ(g, 'sq_cat1') < 60,
+      say: () => 'She is a cat. Cats go where they go. This one would know, being ALSO a cat.\n\n*He sniffs.* She went west, toward the old arch on the beach. This one smelled herring on the wind. Stolen herring. The worst kind of herring, and also the best.' },
+    { id: 'rank', label: 'The Admiral outranks you?', show: (g) => CQ(g, 'sq_cat1') >= 20,
+      say: () => 'Article One. The Admiral outranks all hands. J\'zhirr has read the Articles many times, looking for the part where it says "except J\'zhirr, who is also a cat, and a navigator, and has thumbs". It is not there. J\'zhirr has written it in, in pencil. Odette rubs it out.' },
+    { id: 'sardine', label: 'The Golden Sardine', show: (g) => CQ(g, 'sq_cat2') >= 10 && !g.flags.trialSardine,
+      say: (g) => {
+        if (g.player.inventory.has('proper_hook')) return 'Off the end of the pier. At dawn — between five and eight. The golden sardine comes up with the sun, and goes down when the gulls wake. Patience. You will catch plain herring first. Many plain herring.';
+        g.giveItem('proper_hook', 1);
+        return 'The Trial of Tribute. The Admiral accepts only one tribute: the golden sardine, which runs in the shallows off the end of the pier at dawn, between five and eight. Shines like a coin. Tastes like — J\'zhirr does not know what it tastes like. J\'zhirr has never been ALLOWED.\n\n*He unpins a brass hook from his collar and holds it out, then doesn\'t let go of it for a moment.* This is a PROPER hook. Bring it back.';
+      } },
+    { id: 'insults', label: 'Insults', show: (g) => CQ(g, 'sq_cat2') >= 10 && !g.flags.trialTongues,
+      say: (g) => {
+        const t = learnRetorts(g, 'jzhirr');
+        return t ? 'Grumm\'s insults? J\'zhirr has heard them all, many times, through the floor of the Mitten. Here. Insult him with his own boredom.\n\n' + t : 'J\'zhirr has given you everything. Even the hook. Go away and win, so J\'zhirr can nap.';
+      } },
+    { id: 'stars', label: 'Navigation', say: () => 'The trick of navigation is this: know where you are, know where you are going, and have a nap in between. J\'zhirr has never lost a ship. J\'zhirr has never been allowed to steer one either. These facts are probably related.' },
+    crewChat,
+  ],
+};
+
+DIALOGUE.fennick = {
+  greeting: (g) => {
+    if (CQ(g, 'sq_cat4') >= 60) return '*The skeleton in the barrel waves a bony hand.* Is it done, then? Is Mother at rest? I felt the Meringue go. Like a tide going out inside my ribs. Very restful. I may have a little nap myself. In about forty years.';
+    return pick(['*A skeleton in a barrel, draped in seaweed, raises its hat — it doesn\'t have a hat — raises its HAND, politely.* Good evening. I am so very sorry about the raid.', 'Fishbones Fennick, gunner\'s mate of the Dread Meringue, formerly. Currently, a barrel. Mind the drip.', 'Lovely evening. I think. I\'ve rather lost my sense of evenings.']);
+  },
+  topics: [
+    { id: 'where', label: 'Where is the Admiral?', show: (g) => CQ(g, 'sq_cat3') >= 30 && CQ(g, 'sq_cat3') < 40,
+      say: (g) => {
+        if (CQ(g, 'sq_cat3') < 35) g.quests.set('sq_cat3', 35, g.day());
+        g.quests.set('sq_cat3', 40, g.day());
+        return 'Aboard the Meringue, I\'m afraid, with Mother Brisk. Do sit down — no, there\'s nowhere to sit. Sorry.\n\nMother thinks your Admiral is HER cat. Crumpet. Crumpet went down with the ship forty years ago when we struck the Gullstack, and Mother\'s been searching ever since. Can\'t rest without her. None of us can. We go where Mother goes. Then this fog came up and she saw an orange cat on a ship\'s rail and — well. Ghosts see poorly in daylight, and worse in fog, and all orange cats look alike to the dead.\n\nThere was a cabin boy, you know. Mother gave Crumpet to him to carry to the boat. Ginger lad. Cried a great deal. Never did find out what became of him.';
+      } },
+    { id: 'lantern', label: 'A ghost-lantern', show: (g) => CQ(g, 'sq_cat3') === 50,
+      say: (g) => {
+        g.quests.set('sq_cat3', 60, g.day());
+        return 'A drowned light! Oh, yes, we all had one. Mother\'s orders: a light that burns in any weather, so the Meringue could always find her crew. Mine went when I washed up in that sea cave in the west cliffs — the Drowned Grotto, your lot call it. Left it on a rock, beside a lady of some size.\n\n*He lowers his voice, which makes no sense for a skull.* She pinches.';
+      } },
+    { id: 'meringue', label: 'The Dread Meringue', say: () => 'Finest ship that ever sailed the Abecean. Forty guns, three masts, and a figurehead of Mother Brisk holding a cat. The cat was the scary part. We sank on a clear night — fog came out of nowhere, and the Gullstack came out of the fog. Mother always said she\'d sail till she found Crumpet. Mother always meant what she said.' },
+    { id: 'legs', label: 'Your legs', say: () => 'Somewhere off the Gullstack, I imagine, having a lovely time. I hope they\'re together. They were always close.' },
+  ],
+};
+
+DIALOGUE.brisk = {
+  greeting: (g) => {
+    if (g.flags.briskRested) return '*She is fading, smiling, a cat in her arms.*';
+    return '*A tall woman made of fog and green light sits in a great carved chair, a tricorn on her head, stroking the Admiral, who sits rigid on her lap with an expression of profound personal insult.* Who\'s this, then? Come to steal my Crumpet back? Over my dead body. *She considers.* Over my second dead body.';
+  },
+  topics: [
+    { id: 'give', label: 'Give her back', show: (g) => !g.flags.briskRested,
+      say: () => 'Give her BACK? She\'s mine. Forty years I\'ve sailed in circles through every fog on the Abecean looking for this cat, and I find her sitting on a beached HULK with a fat old fool feeding her fish off a silver plate. She was wasted on him. She\'s home now. Aren\'t you, my precious, my terror, my — ow. She bit me. She always bit me. That\'s how I know.' },
+    { id: 'not', label: 'That\'s not Crumpet', show: (g) => !g.flags.briskRested,
+      say: () => 'Of course it\'s Crumpet. Orange. Fat. Rude. Hates being held. *She holds the Admiral up at arm\'s length in the green gloom, squinting.* ...She\'s put on weight. And lost a sock. Cats do that. Forty years in the sea, you\'d lose a sock.' },
+    { id: 'crumpet', label: 'Show her Crumpet', show: (g) => !g.flags.briskRested && !!g.flags.crumpetFound,
+      say: (g, npc) => {
+        g.ui.queueAfterDialogue = () => g.briskRests(npc, 'crumpet');
+        return '*You step aside. Behind you, glowing faintly in the dark of the cabin, a small orange cat with one white sock sits down, curls her tail round her feet, and looks at Mother Brisk.*\n\n*Mother Brisk goes absolutely still.*\n\n...Crumpet?\n\n*The ghost-cat crosses the floor in three unhurried steps, jumps up onto her lap, shoulders the Admiral off it, and turns round twice. The Admiral lands on the deck with a thump and stalks over to you, outraged.*\n\nThere you are. There you ARE, you terrible animal. Where have you BEEN?';
+      } },
+    { id: 'rourke', label: 'Let Rourke speak', show: (g) => !g.flags.briskRested && !g.flags.rourkeRefused && CQ(g, 'sq_cat3') >= 50 && g.cell.actors.some((a) => a.uid === 'gallowglass_follow' && !a.dead),
+      say: (g, npc) => {
+        const ok = g.player.inventory.has('crumpet_collar') || (g.player.ch.skills.speechcraft || 0) >= 40;
+        const intro = '*The Captain steps past you, takes off his hat, and stands there in the green light with his old blue scarf at his throat.*\n\n"Mother. It\'s me. It\'s Rourke. The cabin boy." *She stares.* "You got old," she says.\n\n"I let go of her, Mother. In the water. You told me not to, and I let go. I\'m sorry. I\'ve been sorry every day."\n\n';
+        if (!ok) { g.flags.rourkeRefused = true; return intro + '*Mother Brisk looks at him for a long time.* Sorry doesn\'t bring her back, boy. And here she is, back. I\'m not letting go of her twice. *She pulls the Admiral closer.* (She isn\'t convinced. Something of Crumpet\'s own might reach her — or another way.)'; }
+        g.ui.queueAfterDialogue = () => g.briskRests(npc, 'rourke');
+        return intro + (g.player.inventory.has('crumpet_collar') ? '*You hold out the old brass collar. Mother Brisk takes it and turns it over in her fog-grey fingers.* She never let me put it on her. Not once. She\'d have it off in a minute and hide it in the bilge.\n\n' : '') + '*She looks down at the Admiral, properly, for the first time.* ...This isn\'t Crumpet. Is it. Crumpet had a white sock. Crumpet never sat still this long in her life.\n\n*She lifts the Admiral off her lap, gently, and sets her down.* You were twelve, Rourke. You were twelve years old in black water. I should never have asked it. *Her voice cracks like an old hull.* Find my girl for me, if you can. And keep my hat. The wind keeps taking it anyway.';
+      } },
+    { id: 'fight', label: 'Then I\'ll take her from you', show: (g) => !g.flags.briskRested,
+      say: (g, npc) => {
+        setTimeout(() => g.briskFights(npc), 60);
+        return '*She stands, and keeps standing, until her tricorn brushes the beams.* ALL HANDS! REPEL BOARDERS!';
+      } },
+  ],
+};
+
 export const MERCHANTS = {
   general: {
     gold: 800,
@@ -1155,5 +1374,6 @@ export const MERCHANTS = {
   bakery: { gold: 120, stock: ['sweetroll*12', 'bread*8', 'apple*6', 'pear*4', 'cheese*3'] },
   food: { gold: 150, stock: ['bread*5', 'cheese*4', 'apple*6', 'onion*4', 'potato*4', 'pear*3', 'venison*3', 'mead*3', 'cyrodilic_brandy*1', 'red_mushroom*3'] },
   spells: { gold: 400, stock: ['potion_magicka*4', 'blue_flower*4', 'ring_of_the_wizard'], spells: true },
+  brinewhistle: { gold: 300, stock: ['smoked_herring*8', 'herring*6', 'fish_stew*4', 'rum*6', 'bread*4', 'cheese*3', 'potion_health_light*2', 'potion_fatigue*2', 'lockpick*5', 'iron_arrow*20'] },
   wizard: { gold: 500, stock: ['potion_magicka*6', 'potion_health*2', 'welkynd_stone', 'blue_flower*6', 'ladys_smock*4', 'nirnroot', 'ring_of_the_wizard', 'candelabra', 'magnifying_lens', 'ships_compass'] },
 };

@@ -5,7 +5,7 @@ import { RACES } from '../data/stats.js';
 import { ITEMS, Inventory, rollLoot, parseSpec } from '../data/items.js';
 import { SPELLS } from '../data/spells.js';
 import {
-  buildHumanoid, buildQuadruped, buildMudcrab, buildClannfear, buildChicken, buildWisp, buildRabbit, animateRig, buildWeaponMesh, buildShieldMesh, attachBow,
+  buildHumanoid, buildQuadruped, buildMudcrab, buildClannfear, buildChicken, buildWisp, buildRabbit, animateRig, buildWeaponMesh, buildShieldMesh, attachBow, buildHat, buildSeaweed,
 } from './models.js';
 import { buildKitRig } from './kitRig.js';
 import { isKitReady } from './characterKit.js';
@@ -30,7 +30,7 @@ export function makeActorDef(npcOrTpl) {
   def.tplId = npcOrTpl.tpl;
   def.body.kind = 'human';
   if (npcOrTpl.race) def.body.race = npcOrTpl.race;
-  for (const k of ['shirt', 'pants', 'robe', 'hair', 'hairStyle', 'beard', 'hood', 'kitTint', 'kitOutfit', 'skin', 'opacity', 'float', 'emissiveEyes', 'head', 'scale', 'hunch', 'sleeves', 'boots']) if (npcOrTpl[k] !== undefined) def.body[k] = npcOrTpl[k];
+  for (const k of ['shirt', 'pants', 'robe', 'hair', 'hairStyle', 'beard', 'hood', 'kitTint', 'kitOutfit', 'skin', 'opacity', 'float', 'emissiveEyes', 'head', 'scale', 'hunch', 'sleeves', 'boots', 'bones', 'seaweed', 'hat']) if (npcOrTpl[k] !== undefined) def.body[k] = npcOrTpl[k];
   return def;
 }
 
@@ -101,6 +101,24 @@ function buildBody(def, rand) {
   return buildHumanoid(o);
 }
 
+/** Hats and sea-rot, fixed to the head bone wherever the rig put it. */
+function dressExtras(rig, b) {
+  if (!b || !rig.head || (!b.hat && !b.seaweed)) return;
+  rig.root.updateMatrixWorld(true);
+  const head = rig.head.getWorldPosition(new THREE.Vector3());
+  const quad = rig.type === 'quadruped';
+  const s = quad ? (b.headSize || 0.12) * 0.62 : 0.115 * (b.scale || 1);
+  const put = (o, at) => { o.position.copy(at); rig.root.add(o); rig.head.attach(o); };
+  if (b.hat) {
+    const hat = buildHat(b.hat, s);
+    put(hat, head.clone().add(new THREE.Vector3(0, quad ? s * 0.9 : 0.2 * (b.scale || 1), quad ? -s * 0.1 : -0.02)));
+  }
+  if (b.seaweed) {
+    put(buildSeaweed(4, 0.45), head.clone().add(new THREE.Vector3(0, 0.02, 0)));
+    if (rig.torso) { const t = rig.torso.getWorldPosition(new THREE.Vector3()); const w = buildSeaweed(5, 0.6); w.position.copy(t).add(new THREE.Vector3(0, 0.25, 0)); rig.root.add(w); rig.torso.attach(w); }
+  }
+}
+
 export class Actor {
   constructor(defIn, x, y, z, opts = {}) {
     const def = typeof defIn === 'object' && defIn.health && defIn.body ? defIn : makeActorDef(defIn);
@@ -147,6 +165,7 @@ export class Actor {
 
     // model
     this.rig = buildBody(def, rand);
+    dressExtras(this.rig, def.body);
     this.group = this.rig.root;
     this.group.userData.actor = this;
     this.height = this.rig.height;
@@ -336,8 +355,12 @@ export class Actor {
         // grazing animals bolt from anything that comes near
         for (const c of this.potentialTargets()) {
           if (c === this || c.def?.ai === 'prey') continue;
+          // tame animals (pets, the Admiral) only run from things that would hurt them
+          if (def.tame && !isHostile(this, c)) continue;
           const d = this.pos.distanceTo(c.pos);
-          if (d < (def.shy ?? (c.isPlayer && c.sneaking ? 9 : 22))) { this.fleeFrom = c; this.fleeT = def.shy ? 1.2 + Math.random() : 4 + Math.random() * 3; break; }
+          const shy = def.shyUnlessSneaking ? (c.isPlayer && c.sneaking ? 0 : def.shyUnlessSneaking) : def.shy ?? (c.isPlayer && c.sneaking ? 9 : 22);
+          if (this.following && c.isPlayer) continue;
+          if (d < shy) { this.fleeFrom = c; this.fleeT = def.shy || def.shyUnlessSneaking ? 1.2 + Math.random() : 4 + Math.random() * 3; break; }
         }
       } else if (def.ai === 'support') {
         // spirits that tend rather than fight: they only follow
@@ -582,9 +605,11 @@ export class Actor {
       const gh = col.ground(this.pos.x, this.pos.z);
       if (gh < cell.waterLevel - 0.9 && col.ground(ox, oz) >= gh) { this.pos.x = ox; this.pos.z = oz; }
     }
-    col.resolve(this.pos, this.radius, this.height);
+    // a perched animal (on a rail, on your lap) stays exactly where it was put
+    const free = this.perch === undefined;
+    if (free) col.resolve(this.pos, this.radius, this.height);
     // separation from other actors
-    for (const o of cell.actors) {
+    if (free) for (const o of cell.actors) {
       if (o === this || o.dead) continue;
       const dx = this.pos.x - o.pos.x, dz = this.pos.z - o.pos.z;
       const min = this.radius + o.radius;
@@ -595,15 +620,15 @@ export class Actor {
       }
     }
     const p = game.player;
-    if (p && !p.dead) {
+    if (p && !p.dead && free) {
       const dx = this.pos.x - p.pos.x, dz = this.pos.z - p.pos.z;
       const min = this.radius + p.radius;
       const d2 = dx * dx + dz * dz;
       if (d2 < min * min && d2 > 1e-6) { const d = Math.sqrt(d2); this.pos.x += (dx / d) * (min - d); this.pos.z += (dz / d) * (min - d); }
     }
-    // ground
-    const g = col.groundHeight(this.pos.x, this.pos.z, this.pos.y, this.radius);
-    if (this.pos.y > g + 0.05) {
+    // ground (or a perch: a ship's rail, a lap)
+    const g = this.perch ?? col.groundHeight(this.pos.x, this.pos.z, this.pos.y, this.radius);
+    if (this.perch !== undefined) { this.pos.y = this.perch; this.vy = 0; } else if (this.pos.y > g + 0.05) {
       this.vy -= 20 * dt;
       this.pos.y += this.vy * dt;
       if (this.pos.y < g) { this.pos.y = g; this.vy = 0; }

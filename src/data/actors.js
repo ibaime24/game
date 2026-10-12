@@ -1,5 +1,6 @@
 // Actor templates: creatures, enemies, summons and townsfolk.
 // body.kind: 'human' | 'quad' | 'crab' | 'raptor'
+import { COVE } from '../world/layout.js';
 
 export const TEMPLATES = {
   // ---------------- wildlife
@@ -157,6 +158,40 @@ export const TEMPLATES = {
     name: 'Spirit Hart', body: { kind: 'quad', color: 0xc8ffe8, len: 1.15, height: 1.0, headSize: 0.17, antlers: true, eyes: 0xffffff }, faction: 'ally', summon: true, spirit: 0x7affc0,
     health: 140, damage: 0, speed: 7.5, reach: 1.5, attackRate: 1, level: 5, ai: 'support', loot: 'none', radius: 0.5, ghostly: true,
   },
+  // ---------------- The Admiral (Brinewhistle Cove)
+  // tame animals never run from you (or your dog), only from things that want to hurt them
+  admiral: {
+    name: 'Admiral Marmalade', body: { kind: 'quad', color: 0xe0883a, len: 0.62, height: 0.34, headSize: 0.13, eyes: 0x9ad040, fat: 1.45, hat: 'bicorne' }, faction: 'wild', pettable: true, essential: true, tame: true,
+    health: 30, damage: 0, speed: 3.4, reach: 1, attackRate: 1, level: 1, fixedLevel: true, ai: 'prey', wander: 2.5, loot: 'none', radius: 0.3,
+  },
+  kitten: {
+    name: 'Kitten', body: { kind: 'quad', color: 0xe0923c, len: 0.3, height: 0.17, headSize: 0.085, eyes: 0x8ac0e0 }, faction: 'wild', pettable: true, essential: true, tame: true,
+    health: 12, damage: 0, speed: 4.6, reach: 1, attackRate: 1, level: 1, fixedLevel: true, ai: 'prey', wander: 1.5, loot: 'none', radius: 0.18,
+  },
+  // Mother Brisk's own cat, forty years drowned: she bolts from anyone who doesn't creep up on her
+  crumpet: {
+    name: 'Crumpet', body: { kind: 'quad', color: 0xe8a050, len: 0.5, height: 0.3, headSize: 0.11, eyes: 0xd0ffe8, sock: true }, faction: 'wild', spirit: 0x8affc8, essential: true, shyUnlessSneaking: 10,
+    health: 10, damage: 0, speed: 4.4, reach: 1, attackRate: 1, level: 1, fixedLevel: true, ai: 'prey', wander: 5, loot: 'none', radius: 0.25,
+  },
+  drowned: {
+    name: 'Drowned', body: { kind: 'human', bones: true, skin: 0xb8c2a4, head: 'skull', emissiveEyes: 0x40ffb0, seaweed: true }, weapon: 'iron_shortsword',
+    health: 45, damage: 0, speed: 4.0, reach: 2.4, attackRate: 1.0, level: 2, ai: 'melee', loot: 'drowned', radius: 0.36, sound: 'rattle', undead: true, gore: 'bone', drips: true,
+    taunts: ['Ship\'s cat! Where\'s the ship\'s cat?', 'Glub.', 'Forty years we\'ve been looking!', 'Mother wants her cat!'],
+  },
+  drowned_harpooner: {
+    name: 'Drowned Harpooner', body: { kind: 'human', bones: true, skin: 0xaab8a0, head: 'skull', emissiveEyes: 0x40ffb0, seaweed: true }, weapon: 'iron_bow',
+    health: 35, damage: 0, speed: 4.0, reach: 22, attackRate: 0.5, level: 3, ai: 'archer', loot: 'drowned', radius: 0.36, sound: 'rattle', undead: true, gore: 'bone', drips: true,
+  },
+  drowned_bosun: {
+    name: 'The Drowned Bosun', unique: true, body: { kind: 'human', bones: true, skin: 0xa8b494, head: 'skull', emissiveEyes: 0x60ffc0, scale: 1.2, seaweed: true, hat: 'tricorn' }, weapon: 'iron_waraxe',
+    health: 140, damage: 0, speed: 4.2, reach: 2.6, attackRate: 0.9, level: 5, fixedLevel: true, ai: 'melee', loot: 'drowned', extraLoot: ['brisk_key', 'gold*30'], radius: 0.42, sound: 'rattle', undead: true, gore: 'bone', block: 0.3, drips: true,
+    taunts: ['Mother Brisk sends her regards!', 'Belay that! BELAY THAT!', 'Forty years without a cat, and you lot keep a fat one in a hat!'],
+  },
+  lady_pinch: {
+    name: 'Lady Pinch', unique: true, body: { kind: 'crab', color: 0x5a7a6a, scale: 2.6 }, health: 200, damage: 14, speed: 2.6, reach: 3.2, attackRate: 0.8, level: 5, fixedLevel: true,
+    ai: 'beast', loot: 'mudcrab', extraLoot: ['pearl*2'], radius: 1.4, armor: 40, sound: 'crab', aggroRange: 14,
+    taunts: ['PINCH.', 'My nephew writes that you were RUDE to him.', 'This is MY lantern now, landwalker!'],
+  },
   // ---------------- the Mythic Dawn
   dawn_assassin: {
     name: 'Mythic Dawn Agent', body: { kind: 'human', race: 'random', robe: true, shirt: 0x8a1414, hood: true, kitTint: 0xb02020 }, weapon: 'dawn_blade', cultist: true,
@@ -230,6 +265,9 @@ export const LEVELED = {
   rime: [['ice_wraith', 1, 3], ['frost_atronach', 2, 2], ['skeleton', 1, 1]],
   rabbits: [['snow_rabbit', 1, 1]],
   greenheart: [['deer', 1, 2], ['doe', 1, 3], ['chipmunk', 1, 4]],
+  drowned: [['drowned', 1, 4], ['drowned_harpooner', 2, 2]],
+  drowned_grotto: [['mudcrab', 1, 2], ['drowned', 1, 3], ['drowned_harpooner', 2, 1]],
+  cove_shore: [['mudcrab', 1, 1]],
 };
 
 export function pickLeveled(list, playerLevel, rand = Math.random) {
@@ -325,6 +363,20 @@ export const NPCS = [
   { id: 'thaldir', tpl: 'citizen', name: 'Thaldir', race: 'bosmer', cell: 'greenheart', x: 18, z: 18, wander: 10, dialogue: 'falinor_folk', kitOutfit: 'ranger', kitTint: 0x5a6a2a, shirt: 0x5a6a2a },
   { id: 'ninwe', tpl: 'citizen', name: 'Ninwe', race: 'bosmer', cell: 'greenheart', x: -16, z: 16, wander: 10, dialogue: 'falinor_folk', female: true, shirt: 0x7a5a2a, hairStyle: 'long' },
   { id: 'aralen', tpl: 'citizen', name: 'Aralen', race: 'bosmer', cell: 'greenheart', x: -6, z: 30, wander: 12, dialogue: 'falinor_folk', kitOutfit: 'ranger', kitTint: 0x3a5a3a, shirt: 0x3a5a3a },
+  // The Admiral: the crew of the Indignant Herring, Brinewhistle Cove
+  { id: 'gallowglass', tpl: 'citizen', name: 'Captain Rourke Gallowglass', race: 'breton', cell: 'herring', dialogue: 'gallowglass', shirt: 0x8a1a1a, kitTint: 0xa82a22, hair: 0xb8805a, hairStyle: 'long', beard: true, hat: 'tricorn', essential: true, stationary: true, hideWhen: 'captainAway', idleAnim: 'Idle_Talking_Loop' },
+  { id: 'gallowglass_pier', tpl: 'citizen', name: 'Captain Rourke Gallowglass', race: 'breton', cell: 'cove', x: COVE.pierWait.x, z: COVE.pierWait.z, dialogue: 'gallowglass', shirt: 0x8a1a1a, kitTint: 0xa82a22, hair: 0xb8805a, hairStyle: 'long', beard: true, hat: 'tricorn', essential: true, stationary: true, activeQuest: ['sq_cat4', 10, 99], activeHours: [20, 4], hideWhen: 'captainFollowing' },
+  { id: 'odette', tpl: 'citizen', name: 'Odette "Two-Hooks" Lark', race: 'redguard', cell: 'salty_mitten', dialogue: 'odette', merchant: 'brinewhistle', innkeeper: true, shirt: 0x2a4a6a, kitTint: 0x3a5a8a, hair: 0x1a1410, hairStyle: 'long', female: true, essential: true, stationary: true },
+  { id: 'grumm', tpl: 'citizen', name: 'Grumm gro-Shank', race: 'orc', cell: 'cove', x: COVE.grummBeach.x, z: COVE.grummBeach.z, wander: 7, dialogue: 'grumm', shirt: 0xd88a3a, kitTint: 0xe09a4a, hairStyle: 'bald', beard: true, essential: true, activeHours: [6, 20] },
+  { id: 'grumm_inn', tpl: 'citizen', name: 'Grumm gro-Shank', race: 'orc', cell: 'salty_mitten', dialogue: 'grumm', shirt: 0xd88a3a, kitTint: 0xe09a4a, hairStyle: 'bald', beard: true, essential: true, stationary: true, activeHours: [20, 6] },
+  { id: 'jzhirr', tpl: 'citizen', name: "J'zhirr", race: 'khajiit', cell: 'cove', x: COVE.lighthouseSteps.x, z: COVE.lighthouseSteps.z, wander: 3, dialogue: 'jzhirr', shirt: 0x5a3a6a, kitTint: 0x7a4a8a, essential: true, activeHours: [6, 20], idleAnim: 'Idle_FoldArms_Loop' },
+  { id: 'jzhirr_inn', tpl: 'citizen', name: "J'zhirr", race: 'khajiit', cell: 'salty_mitten', dialogue: 'jzhirr', shirt: 0x5a3a6a, kitTint: 0x7a4a8a, essential: true, stationary: true, activeHours: [20, 6], idleAnim: 'Idle_FoldArms_Loop' },
+  // one of the drowned, whose legs washed off in the surf; he lives in a barrel by the pier now, and is very sorry
+  { id: 'fennick', tpl: 'citizen', name: 'Fishbones Fennick', cell: 'cove', x: COVE.barrel.x, z: COVE.barrel.z, dialogue: 'fennick', bones: true, head: 'skull', skin: 0xc8ccb0, emissiveEyes: 0x60ffc0, seaweed: true, essential: true, stationary: true, spawnIf: 'fennickAshore', noFacePlayer: true },
+  { id: 'brisk', tpl: 'citizen', name: 'Mother Agathe Brisk', race: 'breton', cell: 'meringue', dialogue: 'brisk', female: true, shirt: 0x2a3a34, kitTint: 0x4a6a5a, hair: 0xc0d0c8, hairStyle: 'long', hat: 'tricorn',
+    skin: 0x9ab8b0, opacity: 0.55, float: true, emissiveEyes: 0xc0ffe0, ghostly: true, stationary: true, spawnUnless: 'briskGone',
+    ai: 'caster', spells: ['frostbite', 'frostbite'], health: 260, magicka: 300, reach: 18, attackRate: 0.8, level: 8, fixedLevel: true, loot: 'drowned', extraLoot: ['brisk_tricorn'],
+    taunts: ['Give me my CAT!', 'Forty years! FORTY YEARS!', 'All hands! Repel boarders!', 'You\'re no better than that crying cabin boy!'] },
   { id: 'roxey_keeper', tpl: 'citizen', name: 'Mirabelle Monet', race: 'breton', cell: 'world', x: 64, z: 40, wander: 4, dialogue: 'innkeeper_roxey', merchant: 'food', shirt: 0x7a5a6a, female: true, essential: true },
 ];
 

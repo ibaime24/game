@@ -91,6 +91,12 @@ Every quest — stages, NPCs, locations, choices, rewards and flags — is docum
 
 **Side quest: *The Chipmunk Moot*** — Eranwe Greenfletch, Falinor's bow-master, challenges you to the rite every Bosmer child sits: tag ten chipmunks with blunted arrows in the Tumbling Grove before her two-minute song ends (they are only offended, never harmed). Win, and she teaches you **Summon Spirit Hart**: a deer of green light that follows you into battle and keeps mending your wounds.
 
+**Brinewhistle Cove** — through the Smugglers' Cut, a timbered door in the rocks south of Fort Sutch, a tunnel opens high above a little pirate cove on the Abecean: shacks on stilts, a tavern built from half a ship's stern, a bonfire on the sand, a long pier, a lighthouse on the headland, and the *Indignant Herring*, a pirate ship beached eleven years ago and now the Captain's house. The sea runs to the horizon and you can swim in it.
+
+**Questline: *The Admiral*** (five quests) — the crew of the *Herring* answer to **Admiral Marmalade**, a very fat orange cat in a tiny bicorne, and to Captain Rourke Gallowglass, who loves her more than the sea. Find her when she goes missing (bring a smoked herring); pass her three trials to join the crew (catch a golden sardine at dawn, sit perfectly still for 45 seconds while she sleeps on your lap, and win an insult duel with the Orc bosun); hold the beach when the drowned crew of the ghost ship *Dread Meringue* come out of the night fog and steal her; row out to the ghost ship with the Captain and settle things with Mother Brisk (three endings, one involving a very shy ghost cat); then come home for Naming Night, and a kitten of your own. Rewards include **Purrsuit**, a cutlass whose strikes startle foes into running.
+
+**Pets** — your dog (from *A Crown of Starflowers*) and your kitten follow you through every door, into every place, on fast travel and across saves. They can't be killed, only knocked down for a moment. Pet them to tell them to stay or come along.
+
 **Legendary arms** — five unique swords rest point-down in rune-ringed stone pedestals under columns of coloured light, and three unique armour sets stand on display deep in the dungeons. Every piece is sculpted onto the skeleton and has its own living effects.
 - **Sunfall** (on the rise behind the Wayshrine of Akatosh): a broad golden blade with a white-hot core and a sunburst guard; fire damage, doubled against the undead.
 - **Starfang** (in the starflower meadow east of the lake): a midnight sabre with a glowing moon-edge and five twinkling stars caught in its curve; now and then a star falls on what it strikes.
@@ -115,11 +121,12 @@ src/
   player.js          movement physics, combat, magic, equipment
   viewmodel.js       first-person arms and weapons
   combat.js          hostility, damage pipeline, projectiles
+  admiral.js         the Brinewhistle Cove questline (mixed into game)
   audio.js           synthesized SFX and generative music
   actors/            character kit (rigged CC0 models + clip state machine), procedural fallbacks, AI
   data/              rules (stats), items, spells, actors, dialogue, quests
   world/             terrain, sky, weather, water, vegetation, props & scatter, architecture, interiors,
-                     quest sites, the Deadlands, the Greenheart
+                     quest sites, the Deadlands, the Greenheart, Brinewhistle Cove
   ui/ui.js           HUD, compass, menus, dialogue, barter, lockpicking, screens
 tests/               Vitest unit tests for rules, collision, data integrity and world layout
 ```

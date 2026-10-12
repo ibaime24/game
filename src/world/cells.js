@@ -12,6 +12,7 @@ import { buildQuestSites, buildMainQuestSites, buildCorwynSites, buildHobsWagon 
 import { buildWintersmeet, buildWhiteHareSites, buildRabbitSites } from './wintersmeet.js';
 import { buildLegendarySwords, buildArmorDisplay } from './legendary.js';
 import { buildGreenheart, buildHollowElder, GH } from './greenheart.js';
+import { buildCove, buildSmugglersCut, buildLostCatPoster } from './cove.js';
 import { CHORROL_CRITTERS } from './chorrol.js';
 import { buildKitRig } from '../actors/kitRig.js';
 import { isKitReady, getClip } from '../actors/characterKit.js';
@@ -19,7 +20,7 @@ import { RACES } from '../data/stats.js';
 import { buildInterior, INTERIORS } from './interiors.js';
 import { buildOblivion, OB, OB_SPAWNS } from './oblivion.js';
 import {
-  heightAt, roadDistance, forestDensity, LOCATIONS, KVATCH_BURN, WATER_LEVEL, LAKE, chorrolPaving, snowCover, wintersmeetPaving,
+  heightAt, roadDistance, forestDensity, LOCATIONS, KVATCH_BURN, WATER_LEVEL, LAKE, chorrolPaving, snowCover, wintersmeetPaving, COVE,
 } from './layout.js';
 import { createNoise2D, fbm, smoothstep, lerp } from '../core/noise.js';
 import { NPCS } from '../data/actors.js';
@@ -155,6 +156,7 @@ export function createWorldCell(game) {
   state.rabbits = buildRabbitSites(b, terrain, game);
   state.legendary = buildLegendarySwords(b, terrain, game);
   buildHollowElder(b, terrain, LOCATIONS.hollow_elder);
+  buildSmugglersCut(b, terrain, LOCATIONS.smugglers_cut);
   if (b.libramPage && !game.taken.libram_page_oak_pickup) {
     const pg = b.libramPage;
     const it = game.placeItem(b, 'libram_page_oak', pg.x, pg.y, pg.z, 'libram_page_oak_pickup', { rot: 0.6, radius: 0.6 });
@@ -272,6 +274,11 @@ export function createInteriorCell(game, id) {
   // quest items
   if (meta.heirloom && !game.taken['jemane_blade_pickup']) {
     game.placeItem(b, 'jemane_blade', meta.heirloom.x, 1.05, meta.heirloom.z, 'jemane_blade_pickup');
+  }
+  // the Grey Mare: a LOST CAT poster pinned high on the east wall, above the furniture
+  if (id === 'inn') {
+    const [wx, wz] = meta.at(11, 6);
+    buildLostCatPoster(b, wx + meta.T / 2 - 0.03, 2.05, wz, -Math.PI / 2, 'poster_inn');
   }
   if (meta.crystal) buildHallOfHours(game, cell, b, meta);
   buildArmorDisplay(game, cell, b, meta, id);
@@ -399,6 +406,40 @@ export function createGreenheartCell(game) {
   const S = (list, x, z, count, radius) => cell.spawns.push({ list, x, z, count, radius, active: false, actors: [], respawnAt: -1 });
   for (const [x, z] of [[60, 80], [-70, 90], [90, -60], [-110, 30], [40, -120], [-40, -140], [130, 60], [-140, -90]]) S('greenheart', x, z, 3, 12);
   for (const [x, z] of [[20, 30], [-30, 30], [10, -45], [-18, -40]]) S('greenheart', x, z, 2, 6);
+  return cell;
+}
+
+/** Brinewhistle Cove: the pirates' town on the Abecean coast, beyond the Smugglers' Cut. */
+export function createCoveCell(game) {
+  const cell = new Cell('cove', 'Brinewhistle Cove', false);
+  const b = new Builder(cell.group, null);
+  b.col = new CollisionWorld(() => 0, 16);
+  const state = buildCove(b, game);
+  cell.collision = b.col;
+  cell.terrain = state.terrain;
+  cell.state = state;
+  cell.water = createReflectiveWater(1400, WATER_LEVEL, () => [cell.scatter, ...(game.particles ? [game.particles.add.points, game.particles.alpha.points] : []), game.sunAnchor, game.sunFlare?.userData.ghosts].filter(Boolean));
+  cell.group.add(cell.water);
+  cell.waterLevel = WATER_LEVEL;
+  cell.absorb(b);
+  if (state.scatter) cell.scatter = state.scatter.build(cell.group);
+  mergeStatic(cell.group, keepSet(cell));
+  cell.bounds = COVE.bounds;
+  cell.hasSky = true;
+  cell.sunlit = true;
+  cell.music = 'explore';
+  cell.lightLevel = 0.9;
+  cell.arrival = COVE.arrival;
+  // the crew and the folk of Brinewhistle
+  for (const npc of NPCS.filter((n) => n.cell === 'cove')) {
+    if (npc.spawnIf && !game.flags[npc.spawnIf]) continue;
+    if (npc.spawnUnless && game.flags[npc.spawnUnless]) continue;
+    game.spawnNpc(cell, npc, npc.x, cell.collision.groundHeight(npc.x, npc.z, 500), npc.z);
+  }
+  // mudcrabs along the west beach, and a pair guarding the Nook
+  const S = (list, x, z, count, radius) => cell.spawns.push({ list, x, z, count, radius, active: false, actors: [], respawnAt: -1 });
+  for (const [x, z] of [[-30, 26], [-44, 30], [38, 30]]) S('cove_shore', x, z, 2, 5);
+  S('cove_shore', COVE.nook.x + 2, COVE.nook.z + 6, 2, 3);
   return cell;
 }
 

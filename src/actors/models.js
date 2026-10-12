@@ -849,3 +849,67 @@ function animateRaptor(r, s, t) {
   }
   if (dead) for (const l of r.legs) l.hip.rotation.x = 0.4;
 }
+
+// ----------------------------------------------------------------- hats and sea-rot
+const _hatMats = {};
+const hatMat = (hex, o = {}) => (_hatMats[hex + JSON.stringify(o)] ||= new THREE.MeshStandardMaterial({ color: hex, roughness: o.rough ?? 0.85, metalness: o.metal ?? 0, emissive: o.emissive ?? 0x000000, side: THREE.DoubleSide }));
+/**
+ * A pirate's hat, sized to a head of radius `s`: a three-cornered tricorn, or a cat-sized admiral's bicorne
+ * worn side to side with gold trim and a cockade.
+ */
+export function buildHat(kind, s = 0.12) {
+  const g = new THREE.Group();
+  const felt = hatMat(kind === 'bicorne' ? 0x1a1c2a : 0x1c1a18);
+  const gold = hatMat(0xd8a830, { rough: 0.4, metal: 0.7 });
+  if (kind === 'bicorne') {
+    // a half-moon of felt standing on edge, crosswise
+    const half = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.5, s * 1.5, s * 0.35, 18, 1, false, 0, Math.PI), felt);
+    half.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    half.position.y = 0;
+    half.scale.set(1, 1, 0.75);
+    g.add(half);
+    const trim = new THREE.Mesh(new THREE.TorusGeometry(s * 1.5, s * 0.06, 4, 18, Math.PI), gold);
+    trim.rotation.y = Math.PI / 2;
+    trim.scale.set(1, 0.75, 1);
+    g.add(trim);
+    const cockade = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.28, s * 0.28, s * 0.05, 10), hatMat(0xc8282a));
+    cockade.rotation.x = Math.PI / 2;
+    cockade.position.set(0, s * 0.55, s * 0.2);
+    g.add(cockade);
+  } else {
+    // a low crown on a triangular brim, its three edges turned up
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.82, s * 0.92, s * 0.75, 12), felt);
+    crown.position.y = s * 0.3;
+    g.add(crown);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.75, s * 1.75, s * 0.08, 3), felt);
+    brim.rotation.y = Math.PI / 6;
+    g.add(brim);
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.75, s * 1.45, s * 0.55, 3, 1, true), felt);
+    cuff.rotation.y = Math.PI / 6;
+    cuff.position.y = s * 0.3;
+    g.add(cuff);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(s * 1.47, s * 1.47, s * 0.07, 3, 1, true), gold);
+    band.rotation.y = Math.PI / 6;
+    band.position.y = s * 0.56;
+    g.add(band);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+/** Ribbons of kelp hanging off the drowned. */
+export function buildSeaweed(n = 4, len = 0.5) {
+  const g = new THREE.Group();
+  const m = hatMat(0x2e5a2a, { rough: 0.6, emissive: 0x08200a });
+  for (let i = 0; i < n; i++) {
+    const geo = new THREE.PlaneGeometry(0.05, len * (0.6 + (i % 3) * 0.25), 1, 4);
+    geo.translate(0, -len * 0.35, 0);
+    const p = geo.attributes.position;
+    for (let k = 0; k < p.count; k++) p.setX(k, p.getX(k) + Math.sin(p.getY(k) * 9 + i) * 0.03);
+    const strip = new THREE.Mesh(geo, m);
+    const a = (i / n) * Math.PI * 2;
+    strip.position.set(Math.cos(a) * 0.12, 0, Math.sin(a) * 0.1);
+    strip.rotation.y = a;
+    g.add(strip);
+  }
+  return g;
+}

@@ -34,6 +34,7 @@ export const LOCATIONS = {
   skyward_shrine: { name: 'Skyward Shrine', x: -250, z: -603, icon: 'shrine', discovered: false },
   varns_camp: { name: "Varn's Camp", x: -330, z: -540, icon: 'camp', discovered: false },
   rime_spire: { name: 'The Rime Spire', x: -92, z: -636, icon: 'ruin', discovered: false },
+  smugglers_cut: { name: "The Smugglers' Cut", x: -470, z: 640, icon: 'cave', discovered: false },
 };
 
 // ---------------------------------------------------------------- the snows of the Jerall foothills
@@ -121,6 +122,7 @@ export const FLATS = [
   { x: -136, z: -597, r: 3, fall: 9, h: 45 }, // ...and the old track cut up to it
   { x: -122, z: -608, r: 3, fall: 9, h: 49.5 },
   { x: -110, z: -619, r: 3, fall: 9, h: 54.5 },
+  { x: -470, z: 640, r: 8, fall: 12, h: 15 }, // the Smugglers' Cut, at the foot of the southern mountains
 ];
 
 export const ROADS = [
@@ -274,3 +276,36 @@ export function isInSettlement(x, z, pad = 0) {
 }
 
 export const KVATCH_BURN = { x: -430, z: 310, r: 170 };
+
+// ---------------------------------------------------------------- Brinewhistle Cove
+// A pirate cove on the Abecean coast, its own little world beyond the Smugglers' Cut (see cove.js).
+// The sea lies to the south (+z); cliffs close it in to the north, east and west.
+/** Where the beach meets the sea (height 0): a crescent, curving out toward the headlands at either end. */
+export function shoreZ(x) {
+  return 23 + Math.sin(x * 0.07) * 1.5 + smoothstep(22, 46, Math.abs(x)) * 7;
+}
+// A small, close cove: grassy headlands wrap round a crescent beach; the town clusters round a sandy plaza
+// and the bonfire, the beached Herring at its heart and shacks on stilts stepping up the slope behind.
+export const COVE = {
+  bounds: [-95, -85, 95, 115],
+  arrival: { x: 0, z: -57, yaw: Math.PI }, // on the ledge outside the tunnel, looking down over the town to the sea
+  exitDoor: { x: 0, z: -63.5 }, // the tunnel door back to Cyrodiil, at the foot of the bank behind the ledge
+  worldReturn: { x: -470, z: 638, yaw: 0 }, // in front of the Smugglers' Cut, facing north toward Fort Sutch
+  town: { x: -2, z: 4 }, // the plaza
+  herring: { x: 21, z: 12, rot: -0.12 }, // long axis roughly east-west, heeled over toward the sea
+  herringDoor: { x: 20.6, z: 9.0 },
+  rail: { x: 19, y: 8.5, z: 11.8 }, // refined against the hull when the cove is built
+  tavern: { x: -21, z: -6 }, tavernDoor: { x: -21, z: -0.8 },
+  fire: { x: -2, z: 6 },
+  pierStart: { x: 4, z: 16 }, pierEnd: { x: 4, z: 62 }, jolly: { x: 7.5, z: 56 },
+  pierWait: { x: 5, z: 50 },
+  barrel: { x: 0.5, z: 18 },
+  nook: { x: -36, z: 21 },
+  grottoDoor: { x: -49, z: 10 },
+  lighthouse: { x: 56, z: 44 }, lighthouseSteps: { x: 49.5, z: 40 },
+  gullstack: { x: 30, z: 96 },
+  meringue: { x: -24, z: 118, rot: 0.15 },
+  // where the drowned wade ashore: just out in the shallows in front of town
+  beach: [-26, -19, -12, -5, 2, 9, 16, 23, 30, 36].map((x) => [x, Math.round((shoreZ(x) + 3.5) * 10) / 10]),
+  grummBeach: { x: -9, z: 0 },
+};

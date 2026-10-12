@@ -42,6 +42,11 @@ Coordinates are overworld metres: north is −Z and east is +X. Chorrol is at (�
 | `sq_pup` | A Crown of Starflowers | Side quest, companion | Hob Furrowfield (wandering by his wagon, east of Lake Rumare) | 5–10 min | A dog |
 | `sq_hare5` | Lightwatch | Wintersmeet questline, part 5 (festival) | Sigrun Warmhands | 10 min | Mantle of the First Snow |
 | `sq_moot` | The Chipmunk Moot | Side quest, archery challenge | Eranwe Greenfletch (Tumbling Grove, Falinor, in the Greenheart) | 5–10 min | Summon Spirit Hart spell |
+| `sq_cat1` | Cat Overboard | The Admiral, part 1 | A LOST CAT poster (Smugglers' Cut, Grey Mare) or entering Brinewhistle Cove | 15–20 min | `sq_cat2` |
+| `sq_cat2` | Articles of the Admiral | The Admiral, part 2 (three trials) | Captain Gallowglass | 20–30 min | `sq_cat3` |
+| `sq_cat3` | The Fog Comes In | The Admiral, part 3 (night raid, dungeon) | Captain Gallowglass | 25–35 min | `sq_cat4` |
+| `sq_cat4` | The Dread Meringue | The Admiral, part 4 (ghost ship, three endings) | Captain Gallowglass | 25–35 min | `sq_cat5` |
+| `sq_cat5` | Naming Night | The Admiral, part 5 (festival) | The Admiral bolting | 10–15 min | A kitten, Purrsuit |
 
 The QuestLog only moves forward: `set(q, stage)` ignores any stage at or below the current one. A stage marked `done` completes the quest.
 
@@ -459,7 +464,7 @@ Ilvaine took Maela's lantern and bound her ghost to it. The son, **Tam**, aged s
    - One pup leaves the litter (`flags.dogAdopted`; from then on only two spawn).
    - Your dog (`dog` template: faction `ally`, beast AI, 90 health, `essential`) appears wearing the crown.
 
-**Your dog:**
+**Your dog:** (the dog and the kitten from `sq_cat5` share one pet system, `PETS` in `game.js`: see **Pets** at the end of the Admiral section)
 - **Following:** it follows you everywhere, through doors and across saves (`flags.dogFollowing`, rebuilt in `enterCell` by `makeDog`).
 - **Fighting:** it attacks anything hostile to you. It is never killed: when knocked down it gets back up and slowly regains health.
 - **Growing up:** it starts at 70% size and grows to full size over three days (`flags.dogBornDay`).
@@ -531,6 +536,102 @@ Everyone shares the topics *The Greenheart* and *The Green Pact*. Deer, does and
 
 **New items:** `practice_bow`, `blunt_arrow`. **New spell:** `spirit_deer`. **New templates:** `chipmunk`, `spirit_deer`. **Flags:** none (the contest state is `game.moot`, which is never saved).
 
+### The Admiral — the Brinewhistle Cove questline (five quests, about 1½–2 hours)
+
+**Premise:**
+- **Brinewhistle Cove** (cell `cove`) is a pirate town on the Abecean coast. Like the Greenheart, it is a separate outdoor cell with its own terrain, sea and sky. You reach it through **the Smugglers' Cut** (`smugglers_cut`, (−470, 640)), a timbered door set in the rocks at the foot of the southern mountains, south of Fort Sutch. Inside, a tunnel mouth opens high on the north cliff of the cove. There is no fast travel out of the cove; leaving through the tunnel puts you back outside the door (`COVE.worldReturn`).
+- **The crew:** the pirates of the *Indignant Herring* ran aground here eleven years ago and never left. The ship lies heeled over on the sand and is now the Captain's house.
+- **The cat:** by the ship's Articles, the crew's commanding officer is **Admiral Marmalade**, a very fat orange cat in a tiny admiral's bicorne. **Captain Rourke Gallowglass** is merely the captain: a terror of the Abecean by reputation, and the softest man alive about his cat.
+- **The secret:** forty years ago Rourke was cabin boy on the ***Dread Meringue***, under **Mother Agathe Brisk**. When the *Meringue* struck the Gullstack, Brisk put her cat **Crumpet** into his arms and told him not to let go. In the black water, he did.
+- **The arc:** the Admiral goes missing; you find her, and she prefers you, which the Captain takes badly. You earn a place in the crew. Then the *Dread Meringue* comes out of the night fog crewed by the drowned, and Brisk's ghost steals the Admiral, sure she is Crumpet. You row out with the Captain. Back home, the Admiral vanishes again, and this time it is kittens.
+- **The fog** (`updateCoveEnv` in `src/admiral.js`): from `sq_cat3` 10 until `flags.fogLifted`, the cove fogs in every night (and always during the raid): the fog closes to ~160 m, turns sea-green-grey, and greys the sky. The offshore *Meringue* shows in the fog from `sq_cat3` 20, glowing through it.
+- **Starting:** reading any of the three **LOST CAT** posters (beside the Smugglers' Cut, inside the tunnel mouth, and on the Grey Mare's east wall: `catposter`), or simply entering the cove, starts `sq_cat1` at 10.
+
+**The cove** (`src/world/cove.js`, `createCoveCell`; positions in `COVE` in `layout.js`):
+- **Brinewhistle:** shacks on stilts along the beach, the bonfire ring (`COVE.fire`, lit at night and for Naming Night), lantern posts, nets, boats and driftwood.
+- **The Salty Mitten** (`salty_mitten`): the tavern, in half a ship's stern. Slot 1 Odette, 2 J'zhirr (evenings), 3 Grumm (evenings). Beds can be rented.
+- **The *Indignant Herring*** (`herring`): the beached ship. The Admiral's sunning spot is on its top rail (`COVE.rail`). Inside: the cabin (slot 1 the Captain, the **Captain's Armchair** `lapchair`, the Admiral's cushion) and the hold (the **Captain's Sea Chest** `seachest` and a wool nest).
+- **The pier:** fishing off the end (`fishspot`, half an hour per try, herring at any time) and the **jolly boat** (`jollyboat`).
+- **Crumpet's Nook** (`COVE.nook`): a sea arch on the west beach with a rotten rowboat painted *CRUMPET* and a heap of stolen wool. Mudcrabs.
+- **The lighthouse** on the east headland, where J'zhirr "navigates" by day; **the Gullstack** offshore; **the Drowned Grotto** (`drowned_grotto`) in the west cliffs; and, in the fog, the ***Dread Meringue*** (`meringue`: main deck, gun deck, flooded hold, and the stern cabin behind a locked door `briskdoor`).
+- Every cove interior's exit door carries an `at` point outside its own door in the cove.
+
+**People and creatures:**
+- **Captain Rourke Gallowglass** (`gallowglass`, `herring` slot 1; red coat, tricorn): hidden while he is away (`hideWhen: 'captainAway'`: aboard with you, or waiting on the pier at night during `sq_cat4`). **`gallowglass_pier`** waits at `COVE.pierWait` 20:00–04:00 during `sq_cat4`. Aboard the *Meringue* he is **`gallowglass_follow`** (`makeCaptainFollower`): an ally with a cutlass who fights beside you and can't be killed.
+- **Admiral Marmalade** (`admiral`): a fat orange cat (`fat: 1.45`) in a bicorne. `tame` (she never runs from you, your dog or the crew, only from things that would hurt her), `pettable`, `essential`. Where she is at each point of the story is `admiralSpot()`; `syncCove` puts her there.
+- **Odette "Two-Hooks" Lark** (`odette`, Redguard, merchant `brinewhistle`: smoked herring, herring, fish stew, rum, bread, potions); **Grumm gro-Shank** (`grumm` on the beach 06:00–20:00, `grumm_inn` in the tavern otherwise; Orc bosun, knitter, insult champion); **J'zhirr** (`jzhirr` at the lighthouse steps by day, `jzhirr_inn` evenings; Khajiit navigator, *"ALSO a cat"*).
+- **Fishbones Fennick** (`fennick`): a legless drowned sailor in a barrel by the pier, from the end of the raid (`flags.fennickAshore`). Very sorry.
+- **Mother Agathe Brisk** (`brisk`, `meringue` slot 1): a ghost captain (`ghostly`, caster, 260 health). At half health in a fight she calls up two drowned.
+- **Crumpet** (`crumpet`, in the *Meringue*'s hold): a glowing ghost cat with one white sock (`sock`, `spirit`). `shyUnlessSneaking: 10`: she bolts from anyone within 10 m who isn't sneaking.
+- **Creatures:** **Drowned** (`drowned`, seaweed-hung skeletons with cutlasses), **Drowned Harpooner** (`drowned_harpooner`, archer), **The Drowned Bosun** (`drowned_bosun`, carries **Brisk's Cabin Key**), and **Lady Pinch** (`lady_pinch`, a mudcrab the size of a rowboat, the Grotto's boss). Leveled lists `drowned`, `drowned_grotto` and `cove_shore` (mudcrabs).
+
+**1. `sq_cat1` — Cat Overboard**
+1. **10:** a poster, or arriving in the cove. Find the Captain aboard the *Herring*.
+2. **20:** Captain, *The Admiral*: two days gone; ask the crew.
+3. **30:** Odette, *Have you seen the Admiral?*: she stole a smoked herring and went west. Odette gives you a **Smoked Herring** (and another, free, if you lose it). Sandy **paw prints** show on the beach from here until 50. Grumm (fat, grumpy, stealing wool: the first hint of kittens) and J'zhirr add colour.
+4. **40:** within 12 m of Crumpet's Nook.
+5. **50:** use the Admiral while holding a Smoked Herring. She eats it, slowly, while looking at you, and follows you (`flags.admiralFollowing`; she follows through doors and across saves). Under her is **an old brass collar** (`crumpet_collar`): *CRUMPET — D. MERINGUE*. Without a herring: *"She looks at you as if YOU were the one who was lost."*
+6. **60:** bring her inside the *Herring* within 10 m of the Captain.
+7. **100:** Captain, *She's back*: joy, then jealousy (she sits on your foot), then he goes pale at the collar. 50 gold; the Admiral goes to her rail; he gives you **The Articles of the *Indignant Herring*** and starts `sq_cat2`.
+
+**2. `sq_cat2` — Articles of the Admiral** (stages 20 / 30 / 40 at one, two, three trials passed, `catTrialStage`)
+- **Trial of Tribute:** J'zhirr, *The Golden Sardine*, gives **J'zhirr's Proper Hook**. Fish off the pier **between 05:00 and 08:00**: 60% per try, sure on the third, misses give a herring. Use the Admiral holding the **Golden Sardine** (`flags.trialSardine`).
+- **Trial of Patience:** Odette, *The Lap*. Sit in the Captain's armchair (`player.seated`: eye lowered, held in place). The Admiral comes out from her cushion, settles on your knees, and a meter fills over **45 seconds**. Any movement key, jump, attack, block, spell, sneak or sheathe gets you up, and she leaves in disgust ("She will remember this."); sit again to retry (`flags.trialLap`). Passing teaches the fifth retort.
+- **Trial of Tongues:** Grumm, *I challenge you!* Three of his five insults, drawn at random; answer each from the retorts you have learned (`flags.retorts`), or *"...Er."*. Three right wins (`flags.trialTongues`); one wrong and he laughs you off (rematch any time). Retorts: Odette teaches two, J'zhirr two, and the Lap the last:
+
+  | Insult | Retort |
+  |---|---|
+  | "My grandmother had a sharper wit than you, and she was a barnacle." | "That explains the family resemblance." |
+  | "I've seen sardines with more courage than you!" | "And you ate them all, by the look of you." |
+  | "When I'm done with you, they'll use you as a mop!" | "Good. Then this deck will finally get cleaned." |
+  | "Your knots are so loose the tide unties them!" | "At least my knots don't come with a pom-pom." |
+  | "Not even the Admiral would sit on you!" | "She did, this morning. Ask her." |
+
+- **100:** Captain, *The trials are done*: the Admiral taps your boot with her paw. You are **Cat's-Paw**: the **Cat's-Paw Bandana** and 100 gold. *"Fog's coming in. Haven't seen fog like that in forty years."* Starts `sq_cat3`.
+
+**3. `sq_cat3` — The Fog Comes In**
+1. **10:** stay in the cove after dark. The night fog begins.
+2. **20:** the raid (`startRaid`), the first time you are in the cove **between 21:00 and 03:00**: a ship's bell tolls three times and the *Meringue* looms out of the fog. Drowned wade out of the surf at `COVE.beach` in three waves (4, 4, then 5 with **The Drowned Bosun**). Odette and Grumm fight beside you (`*_raid` copies). Leaving the cove mid-raid calls it off; it starts again the next night.
+3. **30:** after the last wave the Captain finds the Admiral gone; wet prints run from the *Herring* into the sea, and Fennick is in his barrel. **A Soggy Note** (`brisk_note`) lies on her cushion.
+4. **35:** the note picked up. **40:** Fennick, *Where is the Admiral?*: Brisk thinks she's Crumpet; a ginger cabin boy was meant to save her.
+5. **50:** Captain, *Mother Brisk*: the confession. The *Meringue* can only be found in fog, by someone carrying a drowned light.
+6. **60:** Fennick, *A ghost-lantern*: he lost his in the Drowned Grotto, "beside a lady of some size".
+7. **70:** the **Ghost-Lantern** (`ghost_lantern`, a lantern-style light that burns green and keeps burning when you swim, `lightStyle: 'ghost'`) taken from its rock beside Lady Pinch.
+8. **100:** Captain, *The ghost-lantern*: he ties on his old cabin-boy's scarf. *"We row tonight."* `flags.jollyReady`; starts `sq_cat4`.
+
+**4. `sq_cat4` — The Dread Meringue**
+1. **10:** the jolly boat, **between 20:00 and 04:00**, holding the Ghost-Lantern (the Captain waits on the pier). By day: "Come back after dark"; without the lantern: "nothing out there but fog".
+2. **20:** aboard (`meringue`), the Captain beside you. If you never took Brisk's key from the Bosun after the raid, another Bosun is aboard (`bosun_meringue`). Rowing back early (the *Meringue*'s exit, *The Jolly Boat*) sends the Captain home; he waits on the pier again.
+3. **Crumpet (optional):** sneak up on her in the hold and use her; she follows you (`flags.crumpetFound`), but never leaves the ship.
+4. **40:** the stern cabin opened with Brisk's key (`flags.briskDoor`), within 10 m of Brisk, who has the Admiral on her lap.
+5. **The endings:**
+   - ***Show her Crumpet*** (with `crumpetFound`): Crumpet shoulders the Admiral off Brisk's lap. Brisk gives you **Brisk's Tricorn** and **Brisk's Compass**. Best ending.
+   - ***Let Rourke speak*** (the Captain present, after `sq_cat3` 50): he confesses. With the **brass collar** in your pack, or Speechcraft 40+, she forgives the boy and lets go, and you get the Tricorn. Otherwise she refuses, once and for all (`flags.rourkeRefused`).
+   - ***Then I'll take her from you*** (`briskFights`): she fights; killing her gives **60** and drops the Tricorn (`flags.briskFought`).
+   - The two peaceful endings (`briskRests`) give **70**: her crew lay down their cutlasses and vanish, and Brisk (with Crumpet) fades away over a few seconds (`flags.briskRested`, `briskGone`).
+6. **100:** use the Admiral to pick her up (`finishMeringue`): you row home and arrive on the pier at the next 06:00. Peaceful: the *Meringue* sails into the sunrise; fight: she sinks. `flags.fogLifted`, and the fog never returns. The Admiral bolts the moment the boat touches the pier. Starts `sq_cat5`.
+
+**5. `sq_cat5` — Naming Night**
+1. **10:** the Admiral has bolted. **20:** Grumm, *The Admiral's run off again*: his wool's gone; prints lead into the *Herring*.
+2. **30:** the Captain's Sea Chest (its lid now open): the Admiral and **four kittens** (orange; orange with a white sock; black; grey) on Grumm's wool.
+3. **40:** Captain, *Kittens!*: Naming Night at the bonfire at sundown.
+4. **The party** (`startNamingNight`): within 14 m of the bonfire **between 19:00 and 23:00**. The Captain, Odette, Grumm and J'zhirr (`*_fest` copies) stand round the fire with the Admiral and the litter, for a scripted ~60-second scene: two bowls of **Odette's Fish Stew**; Grumm's **A Very Small Jumper** for you; J'zhirr names the black kitten **Also-A-Cat**; Fennick sings a shanty and the crew roar the chorus; the Captain names the white-socked kitten **Crumpet**; two volleys of fireworks from the *Herring*'s cannons.
+5. **100:** pick of the litter: the orange one or the grey one (named **Kipper**, **Mizzen**, **Bilge** or **Captain Fluffbeard**), or Also-A-Cat herself (`flags.kittenName`, `kittenColor`). The Captain gives you **Purrsuit** and 300 gold (`flags.namingNightDone`). Afterwards the Admiral and the three other kittens live on the *Herring*'s rail. The party breaks up once you are 35 m from the fire.
+
+**Your kitten** (`kitten` pet): exactly like the dog (see **Pets** below): follows you everywhere, can't be killed, *Stay here* / *Come along*, and grows from kitten to cat (×1.66) over three days. It never fights; when something hostile comes near it scampers away from it.
+
+**Rewards:** **Purrsuit** (`purrsuit`: a quick one-handed blade with a gold cat's-head pommel; each hit has a 1 in 5 chance to startle the foe into running for 3 s, `startle: 0.2`); **Brisk's Tricorn** (head, +20 Health, +10 Magicka); **Brisk's Compass** (amulet, +15 Health, +15 Magicka; best ending only); **Cat's-Paw Bandana** (head, +10 Health); a kitten; and `QUEST_GOLD` for each of the five quests.
+
+**New items:** quest: `lost_cat_poster`, `crumpet_collar`, `herring_articles`, `proper_hook`, `golden_sardine`, `brisk_note`, `brisk_key`, `ghost_lantern`; rewards: `purrsuit`, `brisk_tricorn`, `brisk_compass`, `catspaw_bandana`, `tiny_jumper`; food: `smoked_herring`, `herring`, `fish_stew`, `rum`; ingredient: `sea_salt` (loot list `drowned`).
+
+**New templates:** `admiral`, `kitten`, `crumpet`, `drowned`, `drowned_harpooner`, `drowned_bosun`, `lady_pinch`. Body options: `hat: 'tricorn' | 'bicorne'`, `seaweed`, `fat`, `sock`. AI options: `tame`, `shyUnlessSneaking`. Actors can `perch` at a fixed height (the rail, a lap).
+
+**Flags:** `admiralFollowing`, `trialSardine`, `sardineTries`, `trialLap`, `trialTongues`, `retorts`, `fennickAshore`, `jollyReady`, `gallowglassFollowing`, `crumpetFound`, `briskDoor`, `briskRested`, `briskFought`, `briskGone`, `briskHow`, `rourkeRefused`, `fogLifted`, `kittenName`, `kittenColor`, `namingNightDone`, and the pet flags `kittenAdopted`, `kittenFollowing`, `kittenStaying`, `kittenStayCell`, `kittenStayPos`, `kittenBornDay`.
+
+**Pets** (`PETS` in `game.js`: the dog from `sq_pup`, the kitten from `sq_cat5`):
+- **Immortal:** `essential`, so a killing blow only knocks them down; they regain health steadily, and `tickPets` stands them straight back up if anything ever does mark them dead.
+- **Everywhere you go:** a following pet is carried through every door, into every cell (the overworld, interiors, the Greenheart, the cove, the *Meringue*, Oblivion), on fast travel, and is rebuilt from flags when you load a save. A pet told to *Stay here* waits in that cell, at that spot, across saves.
+
 ---
 
 ## Quest locations
@@ -566,6 +667,8 @@ Everyone shares the topics *The Greenheart* and *The Green Pact*. Deer, does and
 | The Rime Spire | `rime_spire` | (−92, −636), on a ledge NE of Wintersmeet | `sq_hare2`, `sq_hare4` (`rime_spire` interior) |
 | The Hollow Elder | `hollow_elder` | (−565, −95), deep in the western woods; door faces east | entrance to the Greenheart (`sq_moot`) |
 | Falinor / the Tumbling Grove | — | Greenheart cell: town (0, −12), grove (−78, −48), range (−50, 20) | `sq_moot` |
+| The Smugglers' Cut | `smugglers_cut` | (−470, 640), south of Fort Sutch | entrance to Brinewhistle Cove (`sq_cat*`) |
+| Brinewhistle Cove | — | cove cell (about 100 m across): plaza and bonfire (−2, 6), the Herring (21, 12), the Mitten (−21, −6), pier (4, 16)–(4, 62), the Nook (−36, 21), Grotto door (−49, 10), lighthouse (56, 44), tunnel mouth (0, −57) | `sq_cat1`–`sq_cat5` |
 
 **Interiors:**
 - `inn`: the Grey Mare. Slots 1 Emfrid, 2 Rimalus Bruiant (Tam Corwyn), 3 Ysolde, 4 Corvin (home), 5 Tillmon, 6 Sheogorath.
@@ -575,6 +678,10 @@ Everyone shares the topics *The Greenheart* and *The Green Pact*. Deer, does and
 - `rime_spire`: Cassius Frey's tower (`rime` spawn list). Slot 1 is Cassius. It has braziers `v`, ice walls `i` and the frost cage `U`.
 - `priory`: slots 1 Jauffre, 2 Martin.
 - `kvatch_chapel`: slots 1 Martin, 2 Jakben, 3 Tierra.
+- `salty_mitten`: the Salty Mitten, Brinewhistle. Slots 1 Odette, 2 J'zhirr (evenings), 3 Grumm (evenings). Rentable beds.
+- `herring`: the Indignant Herring. Slot 1 Captain Gallowglass; the armchair, the Admiral's cushion, the sea chest.
+- `drowned_grotto`: sea cave (`drowned_grotto` spawn list, boss `lady_pinch`), the ghost-lantern's rock.
+- `meringue`: the Dread Meringue (`drowned` spawn list). Slot 1 Mother Brisk; Crumpet in the hold; the locked stern cabin.
 - `quill_spire`: slot 1 Aldous. Also has an orrery (`q`) and a cauldron (`j`).
 - `fort_sutch` and `nenalatha`: quest dungeons.
 - Also `vilverin` and `sigil`.

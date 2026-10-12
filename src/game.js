@@ -26,10 +26,11 @@ import { Actor } from './actors/actor.js';
 import { pickLeveled, NPCS } from './data/actors.js';
 import { ITEMS, Inventory, rollLoot } from './data/items.js';
 import { QuestLog, QUESTS } from './data/quests.js';
-import { createWorldCell, createInteriorCell, createOblivionCell, createGreenheartCell } from './world/cells.js';
+import { createWorldCell, createInteriorCell, createOblivionCell, createGreenheartCell, createCoveCell } from './world/cells.js';
 import { windUniform } from './world/vegetation.js';
 import { GH } from './world/greenheart.js';
-import { LOCATIONS, snowCover } from './world/layout.js';
+import { LOCATIONS, snowCover, COVE } from './world/layout.js';
+import { ADMIRAL } from './admiral.js';
 import { setWindowGlow } from './world/builder.js';
 import { canLevelUp, detectChance, SKILL_IDS } from './data/stats.js';
 import { UI } from './ui/ui.js';
@@ -42,6 +43,18 @@ import { updateLegendary } from './world/legendary.js';
 
 /** Gold paid for finishing any quest, on top of its own reward. */
 const QUEST_GOLD = 100;
+/**
+ * Pets: they follow you through every door and across saves, and can't be killed — knocked down, they get
+ * back up (`essential`, and tickPets keeps them that way). grow: [start scale, per day, full size].
+ */
+const PETS = {
+  dog: { tpl: 'dog', name: 'Dog', grow: [0.7, 0.1, 1], good: 'Good dog',
+    lines: (n) => [`${n} leans into your hand and sighs happily.`, `${n} rolls over for a belly rub. You oblige.`, `${n} licks your hand, then your face, then, with great enthusiasm, your boot.`],
+    stay: (n) => `${n} sits and waits, tail swishing.`, come: (n) => `${n} bounds to your side.` },
+  kitten: { tpl: 'kitten', name: 'Kitten', grow: [1, 0.22, 1.66], good: 'Good kitty',
+    lines: (n) => [`${n} purrs like a very small boat engine.`, `${n} climbs your arm, sits on your shoulder for a moment, and falls off again.`, `${n} headbutts your hand, then bites it, lovingly.`],
+    stay: (n) => `${n} curls up where they are and pretends it was their idea.`, come: (n) => `${n} trots after you with their tail straight up.` },
+};
 const _emitPos = new THREE.Vector3();
 const _torchTip = new THREE.Vector3();
 const _snowFog = new THREE.Color();
@@ -67,6 +80,7 @@ export const FAST_TRAVEL = {
   roxey_inn: { x: 66, z: 46, yaw: 0 },
   wintersmeet: { x: -182, z: -514, yaw: 0 },
   hollow_elder: { x: -553, z: -95, yaw: Math.PI / 2 },
+  smugglers_cut: { x: -470, z: 636, yaw: 0 },
   hobs_wagon: { x: 570, z: 236, yaw: -1.2 },
 };
 
@@ -446,6 +460,7 @@ export const game = {
     if (id === 'world') throw new Error('world not built');
     if (id === 'oblivion') c = createOblivionCell(this);
     else if (id === 'greenheart') c = createGreenheartCell(this);
+    else if (id === 'cove') c = createCoveCell(this);
     else c = createInteriorCell(this, id);
     this.attachFirelight(c);
     this.freezeStatic(c);
@@ -465,6 +480,8 @@ export const game = {
     await nextFrame();
     if (this.corwynScene) this.abortCorwynScene();
     if (this.moot) this.endMoot(false, true);
+    if (this.lap) this.standUp(false);
+    if (this.cell) this.coveOnLeave(this.cell.id, id);
     if (this.cell) {
       this.scene.remove(this.cell.group);
       for (const a of this.cell.actors) this.scene.remove(a.group);
@@ -523,14 +540,20 @@ export const game = {
       c.following = true;
       followers.push(c);
     }
-    // your dog comes with you everywhere (and is rebuilt from a save)
-    if (this.flags.dogFollowing && !followers.some((a) => a.uid === 'dog') && !cell.actors.some((a) => a.uid === 'dog')) followers.push(this.makeDog(p.x - 1.5, y, p.z + 1.2));
-    if (this.flags.dogStaying && this.flags.dogStayCell === id && this.flags.dogStayPos && !cell.actors.some((a) => a.uid === 'dog')) {
-      const [sx, sy, sz] = this.flags.dogStayPos;
-      const d = this.makeDog(sx, sy, sz);
-      d.home.set(sx, sy, sz);
-      this.addActor(d, cell);
+    // your pets come with you everywhere (and are rebuilt from a save); one told to stay waits where you left it
+    for (const k of Object.keys(PETS)) {
+      const has = (a) => a.uid === k;
+      if (this.flags[k + 'Following'] && !followers.some(has) && !cell.actors.some(has)) followers.push(this.makePet(k, p.x - 1.5, y, p.z + 1.2));
+      if (this.flags[k + 'Staying'] && this.flags[k + 'StayCell'] === id && this.flags[k + 'StayPos'] && !cell.actors.some(has)) {
+        const [sx, sy, sz] = this.flags[k + 'StayPos'];
+        const d = this.makePet(k, sx, sy, sz);
+        d.home.set(sx, sy, sz);
+        this.addActor(d, cell);
+      }
     }
+    // the Admiral, trotting after you on her way home; the Captain, aboard the Meringue
+    if (this.flags.admiralFollowing && !followers.some((a) => a.uid === 'admiral') && !cell.actors.some((a) => a.uid === 'admiral')) followers.push(this.makeAdmiral(p.x + 1.2, y, p.z + 1.2));
+    if (this.flags.gallowglassFollowing && id === 'meringue' && !followers.some((a) => a.uid === 'gallowglass_follow') && !cell.actors.some((a) => a.uid === 'gallowglass_follow')) followers.push(this.makeCaptainFollower(p.x - 1, y, p.z + 1));
     this.dawnExposedCell = null;
     this.silentTheft = false;
     this.sermon = null;
@@ -564,6 +587,8 @@ export const game = {
     }
     // a scene abandoned halfway (you walked off, or loaded) can start again later
     if (this.lightwatch && id !== 'world') this.lightwatch = null;
+    if (this.namingNight && id !== 'cove') this.endNamingNightCrowd();
+    this.coveOnEnter(id);
 
     // environment
     this.sky.mesh.visible = cell.hasSky;
@@ -581,7 +606,7 @@ export const game = {
       this.scene.background = null;
     }
     this.audio.setMusic(cell.music);
-    this.setLightPoolSize(cell.interior || id === 'greenheart' ? 8 : 4);
+    this.setLightPoolSize(cell.interior || id === 'greenheart' ? 8 : id === 'cove' ? 6 : 4);
     this.updateLights(0);
     await nextFrame();
     this.state = prevState === 'loading' || prevState === 'boot' || prevState === 'chargen' ? 'playing' : prevState;
@@ -716,6 +741,7 @@ export const game = {
     return r;
   },
   onItemGained(id) {
+    this.coveOnItem(id);
     if (id === 'brugo_head' && this.quests.stage('ms_bounty') < 20) this.quests.set('ms_bounty', 20, this.day());
     if (id === 'jemane_blade' && this.quests.stage('ms_heirloom') < 20) this.quests.set('ms_heirloom', 20, this.day());
     const map = this.quests.stage('sq_map');
@@ -769,6 +795,7 @@ export const game = {
     }
     if (killer?.isPlayer || killer?.faction === 'ally') this.ui.notify(`${actor.name} has been slain.`);
     if (actor.uid === 'aurelian') this.flags.recruiterGone = true;
+    this.coveOnDeath(actor);
     if (actor.def.tplId === 'wisp') {
       // the wisp bursts, and the page it was playing with flutters down
       const at = actor.pos.clone();
@@ -866,6 +893,7 @@ export const game = {
   /** NPCs who only appear at certain hours or quest stages. */
   npcActive(a) {
     const d = a.def;
+    if (d.hideWhen && this[d.hideWhen]?.() && !a.target) return false;
     if (d.activeHours) {
       const [h0, h1] = d.activeHours;
       const hr = ((this.time.hours % 24) + 24) % 24;
@@ -905,8 +933,9 @@ export const game = {
     if (this.bardShow && c.id === 'inn') this.tickBardPerformance();
     this.tickCorwyn();
     this.tickWhiteHare();
-    this.tickDog();
+    this.tickPets();
     this.tickBunnies();
+    this.tickCove();
     if (this.moot) this.tickMoot();
     // Henrietta glows, and can be caught if you get right up close
     if (c.id === 'world' && this.flags.wizardQuest && !this.flags.henCaught) {
@@ -1967,13 +1996,36 @@ export const game = {
     if (st === 10 && this.player.inventory.count('starflower') >= 10) this.quests.set('sq_pup', 20, this.day());
     else if (st === 10 && this.player.inventory.count('starflower') > 0) this.ui.notify(`Starflowers: ${this.player.inventory.count('starflower')} of 10`);
   },
-  makeDog(x, y, z) {
-    const d = new Actor('dog', x, y, z, { uid: 'dog' });
-    d.name = this.flags.dogName || 'Dog';
-    d.following = !this.flags.dogStaying;
-    if (this.flags.dogStaying) d.def.wander = 4;
-    this.addCrown(d);
+  makePet(k, x, y, z) {
+    const P = PETS[k], f = this.flags;
+    const d = k === 'kitten' ? this.makeKitten(f.kittenColor ?? 0, x, y, z, 'kitten') : new Actor(P.tpl, x, y, z, { uid: k });
+    d.name = f[k + 'Name'] || P.name;
+    d.faction = 'ally';
+    d.following = !f[k + 'Staying'];
+    if (f[k + 'Staying']) d.def.wander = 4;
+    if (k === 'dog') this.addCrown(d);
     return d;
+  },
+  makeDog(x, y, z) { return this.makePet('dog', x, y, z); },
+  /** A new pet joins you at `at`, small, and starts growing up. */
+  adoptPet(k, at) {
+    const f = this.flags;
+    f[k + 'Adopted'] = true;
+    f[k + 'Following'] = true;
+    f[k + 'Staying'] = false;
+    f[k + 'BornDay'] = this.day();
+    const d = this.makePet(k, at.x, at.y, at.z);
+    d.def.body = { ...d.def.body };
+    d.group.scale.setScalar(PETS[k].grow[0]);
+    this.addActor(d);
+    return d;
+  },
+  /** The Admiral's Captain, rowing out with you to the Meringue: he fights at your side, and can't be killed. */
+  makeCaptainFollower(x, y, z) {
+    const npc = NPCS.find((n) => n.id === 'gallowglass');
+    const cap = new Actor({ ...npc, ai: 'melee', weapon: 'iron_shortsword', faction: 'ally', hideWhen: undefined, stationary: false, health: 220 }, x, y, z, { uid: 'gallowglass_follow' });
+    cap.following = true;
+    return cap;
   },
   /** The ring of starflowers round your dog's neck. */
   addCrown(d) {
@@ -1994,17 +2046,11 @@ export const game = {
     const names = ['Biscuit', 'Bramble', 'Pip', 'Sir Woofington'];
     const finish = (name) => {
       this.flags.dogName = name;
-      this.flags.dogAdopted = true;
-      this.flags.dogFollowing = true;
-      this.flags.dogStaying = false;
       const pup = this.cell.actors.find((a) => a.uid === 'pup_2' || a.uid?.startsWith('pup_'));
       const at = pup ? pup.pos.clone() : this.player.pos.clone().add(new THREE.Vector3(1.5, 0, 1.5));
       if (pup) this.removeActor(pup);
-      const d = this.makeDog(at.x, at.y, at.z);
-      d.def.body = { ...d.def.body };
-      d.group.scale.setScalar(0.7); // still a pup; grows into a dog over the next few days
-      this.flags.dogBornDay = this.day();
-      this.addActor(d);
+      // still a pup; grows into a dog over the next few days
+      const d = this.adoptPet('dog', at);
       this.particles.burst(d.center(), 'magic', 30, 0xbcd4ff);
       this.particles.burst(d.center(), 'heal', 20, 0xffc0d0);
       this.audio.play('chime', 0.9);
@@ -2022,26 +2068,35 @@ export const game = {
     for (let i = 0; i < 5; i++) this.particles.emit({ x: at.x + (Math.random() - 0.5) * 0.4, y: at.y + 0.3, z: at.z + (Math.random() - 0.5) * 0.4, vx: (Math.random() - 0.5) * 0.4, vy: 0.9 + Math.random() * 0.5, vz: (Math.random() - 0.5) * 0.4, life: 1.2, size: 0.22, color: new THREE.Color(1, 0.45, 0.6), shape: 'star' });
     a.yaw = Math.atan2(this.player.pos.x - a.pos.x, this.player.pos.z - a.pos.z);
     this.audio.play('chime', 0.25);
-    if (a.uid !== 'dog') return this.ui.notify(a.def.tplId === 'puppy' ? 'The puppy wriggles with delight and tries to eat your sleeve.' : `${a.name} thumps her tail against the grass.`);
-    const name = this.flags.dogName || 'your dog';
-    const lines = [`${name} leans into your hand and sighs happily.`, `${name} rolls over for a belly rub. You oblige.`, `${name} licks your hand, then your face, then, with great enthusiasm, your boot.`];
+    if (this.petCoveAnimal(a)) return;
+    const k = a.uid, P = PETS[k];
+    if (!P) return this.ui.notify(a.def.tplId === 'puppy' ? 'The puppy wriggles with delight and tries to eat your sleeve.' : `${a.name} thumps her tail against the grass.`);
+    if (k === 'kitten') this.audio.play('purr', 0.5);
+    const f = this.flags, name = f[k + 'Name'] || `your ${k}`;
+    const lines = P.lines(name);
     this.ui.showChoice(name, lines[Math.floor(Math.random() * lines.length)], [
-      a.following ? { label: 'Stay here', fn: () => { a.following = false; a.def.wander = 4; a.home = a.pos.clone(); this.flags.dogStaying = true; this.flags.dogFollowing = false; this.flags.dogStayCell = this.cell.id; this.ui.notify(`${name} sits and waits, tail swishing.`); } }
-        : { label: 'Come along', fn: () => { a.following = true; a.def.wander = 0; this.flags.dogStaying = false; this.flags.dogFollowing = true; this.ui.notify(`${name} bounds to your side.`); } },
-      { label: 'Good dog' },
+      a.following ? { label: 'Stay here', fn: () => { a.following = false; a.def.wander = 4; a.home = a.pos.clone(); f[k + 'Staying'] = true; f[k + 'Following'] = false; f[k + 'StayCell'] = this.cell.id; this.ui.notify(P.stay(name)); } }
+        : { label: 'Come along', fn: () => { a.following = true; a.def.wander = 0; f[k + 'Staying'] = false; f[k + 'Following'] = true; this.ui.notify(P.come(name)); } },
+      { label: P.good },
     ]);
   },
-  /** Your dog keeps up with you, grows up, and doesn't wander back to where it was born. */
-  tickDog() {
-    const d = this.cell.actors.find((a) => a.uid === 'dog' && !a.dead);
-    if (!d) return;
-    if (d.following && !d.target) d.home.copy(this.player.pos);
-    // knocked down, never killed: a good dog gets back up
-    if (d.health < d.maxHealth) d.health = Math.min(d.maxHealth, d.health + d.maxHealth * 0.006);
-    if (this.flags.dogStaying) this.flags.dogStayPos = d.pos.toArray();
-    const days = this.day() - (this.flags.dogBornDay ?? this.day() - 9);
-    d.group.scale.setScalar(Math.min(1, 0.7 + days * 0.1));
-    if (d.following && !d.target && Math.random() < 0.004) this.playAt('growl', d.pos, 0.15);
+  /** Your pets keep up with you, grow up, and never stay down. */
+  tickPets() {
+    for (const k of Object.keys(PETS)) {
+      const d = this.cell.actors.find((a) => a.uid === k);
+      if (!d) continue;
+      // nothing kills a pet: should anything ever manage it, they get straight back up
+      if (d.dead) { d.dead = false; d.health = d.maxHealth * 0.3; d.group.visible = true; d.anim.dead = 0; }
+      if (d.following && !d.target) d.home.copy(this.player.pos);
+      // knocked down, never killed: a good pet gets back up
+      if (d.health < d.maxHealth) d.health = Math.min(d.maxHealth, d.health + d.maxHealth * 0.006);
+      if (this.flags[k + 'Staying']) this.flags[k + 'StayPos'] = d.pos.toArray();
+      const [s0, perDay, full] = PETS[k].grow;
+      const days = this.day() - (this.flags[k + 'BornDay'] ?? this.day() - 9);
+      d.group.scale.setScalar(Math.min(full, s0 + days * perDay));
+      if (k === 'dog' && d.following && !d.target && Math.random() < 0.004) this.playAt('growl', d.pos, 0.15);
+      if (k === 'kitten' && Math.random() < 0.002) this.playAt('meow', d.pos, 0.25);
+    }
   },
 
   // ----------------------------------------------------------------- Ten White Rabbits
@@ -2288,6 +2343,7 @@ export const game = {
     }
     this.corwynOnStage(q, st);
     this.whOnStage(q, st);
+    this.coveOnStage(q, st);
   },
 
   anyEnemyNear(r) {
@@ -2319,8 +2375,13 @@ export const game = {
         if (t.cell) {
           this.audio.play('door');
           if (this.cell.id === 'world') this.doorReturns._last = this.exitPointFor(t);
+          if (this.cell.id === 'cove') this.doorReturns._cove = this.exitPointFor(t);
           if (t.exit) {
+            if (t.coveExit) return this.enterCell('world', COVE.worldReturn);
+            // cove interiors know exactly where their door is outside
+            if (t.at) return this.enterCell(t.cell, t.at);
             if (t.cell === 'world') return this.enterCell('world', this.doorReturns._last);
+            if (t.cell === 'cove') return this.enterCell('cove', this.doorReturns._cove || this.coveDoorFor(this.cell.id));
             if (t.cell === 'oblivion') return this.enterCell('oblivion', this.cells.oblivion?.state.towerDoor);
           }
           if (this.cell.id === 'oblivion' && t.cell === 'sigil') this.oblivionReturn = this.cells.oblivion.state.towerDoor;
@@ -2353,6 +2414,16 @@ export const game = {
         return;
       }
       case 'altar': return this.useHollowAltar();
+      case 'catposter': {
+        if (!this.player.inventory.has('lost_cat_poster') && !this.quests.started('sq_cat1')) this.giveItem('lost_cat_poster', 1, true);
+        if (this.quests.stage('sq_cat1') < 10) this.quests.set('sq_cat1', 10, this.day());
+        return this.ui.showBook(ITEMS.lost_cat_poster);
+      }
+      case 'fishspot': return this.useFishSpot(t);
+      case 'jollyboat': return this.useJollyBoat(t);
+      case 'lapchair': return this.useLapChair(t);
+      case 'seachest': return this.useSeaChest(t);
+      case 'briskdoor': return this.useBriskDoor(t);
       case 'icehole': return this.useIceHole(t);
       case 'heartwood': return this.useHeartwood(t);
       case 'coldbrazier': return this.useColdBrazier(t);
@@ -2411,11 +2482,10 @@ export const game = {
     }
   },
 
-  exitPointFor(door) {
+  exitPointFor(door, w = this.cell.interior ? this.cells.world : this.cell) {
     // a point just outside the door, facing away from it
     const ret = this.doorReturns[door.cell];
     const cellPos = door.pos;
-    const w = this.cells.world;
     // find the direction away from the nearest collider (the building)
     let best = null;
     for (let a = 0; a < 16; a++) {
@@ -2485,7 +2555,7 @@ export const game = {
   fastTravel(locId) {
     const dest = FAST_TRAVEL[locId];
     if (!dest) return;
-    if (this.cell.interior || this.cell.id === 'oblivion' || this.cell.id === 'greenheart') return this.ui.notify('You cannot fast travel from here.');
+    if (this.cell.interior || this.cell.id === 'oblivion' || this.cell.id === 'greenheart' || this.cell.id === 'cove') return this.ui.notify('You cannot fast travel from here.');
     if (this.inCombat()) return this.ui.notify('You cannot fast travel while enemies are nearby.');
     if (this.player.encumbrance() > this.player.carryLimit()) return this.ui.notify('You are overencumbered.');
     const d = Math.hypot(dest.x - this.player.pos.x, dest.z - this.player.pos.z);
@@ -2664,7 +2734,8 @@ export const game = {
     const caged = this.quests.started('sq_hare1') && !this.flags.hareFreed;
     const snowBase = caged ? 0.5 : this.flags.hareFreed && Math.hypot(this.camera.position.x - LOCATIONS.wintersmeet.x, this.camera.position.z - LOCATIONS.wintersmeet.z) < 160 ? 0 : 0.18;
     const w = this.weather.update(dt, dh, this.time.hours, this.camera.position, this.clockT, outdoors, this.audio, snowy, snowBase);
-    const wx = outdoors ? w : { overcast: 0, rain: 0, fog: 0 };
+    // the cove's night fog greys the sky over it too
+    const wx = outdoors ? w : { overcast: c.id === 'cove' ? (this._coveFog || 0) * 0.85 : 0, rain: 0, fog: 0 };
     if (c.hasSky) {
       let tint = c.skyTint || 0;
       if (c.id === 'world' && !this.flags.gateClosed) {
@@ -2697,6 +2768,8 @@ export const game = {
         for (const m of c.state.rays) { m.uniforms.uTime.value = this.clockT; m.uniforms.uNight.value = n; }
         c.state.wall?.color.copy(this.scene.fog.color);
       }
+      // Brinewhistle Cove: salt haze, and the night fog off the Gullstack while the Meringue is about
+      if (c.id === 'cove') this.updateCoveEnv(dt, s);
       // the snows: a pale, cold haze that thickens when it is snowing hard
       if (snowy > 0) {
         this.scene.fog.color.lerp(_snowFog.setRGB(0.78, 0.83, 0.9).multiplyScalar(0.35 + (1 - s.night) * 0.65), snowy * (0.35 + wx.overcast * 0.3));
@@ -2739,7 +2812,7 @@ export const game = {
       this.scene.environmentIntensity = 0.35 + (1 - s.night) * 0.25;
       if (c.vegetation) c.vegetation.update(this.camera.position, this.clockT, this.settings.viewDist);
       if (c.scatter) updateScatter(c.scatter, this.camera.position, this.settings.viewDist / 650);
-      setWindowGlow(c.id === 'world' ? Math.max(0, s.night - 0.15) * 1.1 : 0.5);
+      setWindowGlow(c.id === 'world' || c.id === 'cove' ? Math.max(0, s.night - 0.15) * 1.1 : 0.5);
       if (c.state?.portalMats) for (const m of c.state.portalMats) m.uniforms.uTime.value = this.clockT;
       if (c.state?.lavaTex) { c.state.lavaTex.offset.x = this.clockT * 0.004; c.state.lavaTex.offset.y = Math.sin(this.clockT * 0.1) * 0.02; }
       if (c.state?.gate?.portal) {
@@ -2912,6 +2985,7 @@ export const game = {
       rentedUntil: this.rentedUntil,
       crime: { bounty: this.crime.bounty, stolen: this.crime.stolen },
       lastDoor: this.doorReturns._last,
+      coveDoor: this.doorReturns._cove || null,
       oblivionReturn: this.oblivionReturn || null,
       spawns: world ? world.spawns.map((s) => s.respawnAt) : [],
     };
@@ -2972,7 +3046,9 @@ export const game = {
     this.crime.stolen = s.crime?.stolen || {};
     this.crime.resisting = false;
     this.doorReturns._last = s.lastDoor;
+    this.doorReturns._cove = s.coveDoor || undefined;
     this.oblivionReturn = s.oblivionReturn;
+    this.raid = null; this.namingNight = null; this.lap = null; this.player.seated = null; this.hudBanner(null);
     // rebuild transient cells; keep the expensive overworld but reset its actors
     for (const id of Object.keys(this.cells)) if (id !== 'world') delete this.cells[id];
     if (this.cell) { this.scene.remove(this.cell.group); for (const a of this.cell.actors) this.scene.remove(a.group); this.cell = null; }
@@ -3005,6 +3081,7 @@ export const game = {
     this.flags = { killed: {} };
     this.taken = {}; this.harvested = {}; this.containers = {}; this.unlocked = {}; this.discovered = {}; this.shrines = {};
     this.crime.clear();
+    this.raid = null; this.namingNight = null; this.lap = null; this.player.seated = null; this.hudBanner(null);
     this.quests.load({});
     this.player.newCharacter(opts);
     this.viewmodel.rebuild();
@@ -3019,3 +3096,6 @@ export const game = {
 function nextFrame() {
   return new Promise((r) => requestAnimationFrame(() => r()));
 }
+
+// the Brinewhistle Cove questline lives in its own file
+Object.assign(game, ADMIRAL);

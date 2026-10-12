@@ -232,6 +232,14 @@ export class Audio {
       case 'chime':
         [84, 88, 91].forEach((n, i) => this._tone({ t: t + i * 0.12, freq: NOTE(n), dur: 1.2, type: 'sine', vol: 0.07 * v, verb: 0.8 }));
         break;
+      case 'meow': {
+        const f = 650 + r() * 250;
+        this._tone({ t, freq: f * 0.8, slideTo: f * 1.25, dur: 0.16, type: 'triangle', vol: 0.11 * v, attack: 0.03 });
+        this._tone({ t: t + 0.15, freq: f * 1.25, slideTo: f * 0.7, dur: 0.32, type: 'triangle', vol: 0.1 * v });
+        break;
+      }
+      case 'purr': for (let i = 0; i < 14; i++) this._noiseHit({ t: t + i * 0.05, dur: 0.05, freq: 140, type: 'lowpass', vol: 0.22 * v * (i % 2 ? 0.6 : 1), attack: 0.01 }); break;
+      case 'shipBell': [0, 0.55].forEach((d) => { this._tone({ t: t + d, freq: 523, dur: 2.4, type: 'sine', vol: 0.16 * v, verb: 0.9 }); this._tone({ t: t + d, freq: 1318, dur: 1.4, type: 'sine', vol: 0.05 * v, verb: 0.9 }); }); break;
     }
   }
 

@@ -34,7 +34,7 @@ describe('interiors', () => {
     });
   }
   it('interior NPCs are assigned to a slot of their cell', () => {
-    for (const n of NPCS.filter((x) => !['world', 'none', 'greenheart'].includes(x.cell))) { // 'none': spawned by quests; greenheart: an outdoor region
+    for (const n of NPCS.filter((x) => !['world', 'none', 'greenheart', 'cove'].includes(x.cell))) { // 'none': spawned by quests; greenheart, cove: outdoor regions
       const def = INTERIORS[n.cell];
       expect(Object.values(def.npcs), n.id).toContain(n.id);
     }

@@ -12,7 +12,7 @@ import { buildHumanoid, buildWeaponMesh, buildShieldMesh, animateRig, attachBow 
 import { buildKitRig } from './actors/kitRig.js';
 import { isKitReady } from './actors/characterKit.js';
 import { RACES } from './data/stats.js';
-import { buildLightMesh } from './fx/torch.js';
+import { buildLightMesh, waterproofLight } from './fx/torch.js';
 import { attachBladeFx } from './fx/bladefx.js';
 import { snowCover, roadDistance } from './world/layout.js';
 import { Actor } from './actors/actor.js';
@@ -271,7 +271,7 @@ export class Player {
     // the best light you carry: Maela's lantern over a common torch
     const torch = want ?? Object.keys(ITEMS).filter((id) => ITEMS[id].type === 'light' && this.inventory.has(id)).sort((a, b) => (ITEMS[b].rank || 0) - (ITEMS[a].rank || 0))[0];
     if (!torch) { if (!silent) game.ui.notify('You have no torch.'); return; }
-    if (this.swimming && ITEMS[torch].lightStyle !== 'lantern') { if (!silent) game.ui.notify('You can\'t light a torch in the water.'); return; }
+    if (this.swimming && !waterproofLight(ITEMS[torch])) { if (!silent) game.ui.notify('You can\'t light a torch in the water.'); return; }
     this.stowedShield = ITEMS[this.equipped.shield]?.type === 'armor' ? this.equipped.shield : null;
     this.equip(torch, true);
     if (!silent) game.audio.play('torch', 0.8);
@@ -346,7 +346,8 @@ export class Player {
   lookDir(out = new THREE.Vector3()) {
     return out.set(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
   }
-  eyeHeight() { return this.sneaking ? 1.15 : EYE; }
+  // seated, the eye is a fixed height above the floor the chair stands on, whatever the chair's collider does to pos.y
+  eyeHeight() { return this.seated ? this.seated.y + 1.12 - this.pos.y : this.sneaking ? 1.15 : EYE; }
   eye(out = new THREE.Vector3()) { return out.set(this.pos.x, this.pos.y + this.eyeHeight(), this.pos.z); }
   center(out = new THREE.Vector3()) { return out.set(this.pos.x, this.pos.y + 1.0, this.pos.z); }
   get isAttacking() { return this.attackT >= 0 && this.attackT < 0.6; }
@@ -489,10 +490,17 @@ export class Player {
     if (input.wasPressed('KeyL')) this.toggleTorch();
     if (input.wasPressed('KeyR')) { this.weaponOut = !this.weaponOut; game.audio.play(this.weaponOut ? 'swing' : 'pickup', 0.4); }
 
+    // ---- seated (the Captain's armchair): any step, jump, swing or spell gets you up again
+    if (this.seated) {
+      const stir = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyQ', 'KeyR', 'KeyC'].some((k) => input.isDown(k)) || input.mouseDown(0) || input.mouseDown(2);
+      if (stir) game.standUp(true);
+      else { this.pos.x = this.seated.x; this.pos.z = this.seated.z; this.vel.set(0, this.vel.y, 0); }
+    }
+
     // ---- movement
     const enc = this.encumbrance() > this.carryLimit();
     let mx = 0, mz = 0;
-    if (input.isDown('KeyW') || input.isDown('ArrowUp')) mz -= 1;
+    if (this.seated) { /* sitting still */ } else if (input.isDown('KeyW') || input.isDown('ArrowUp')) mz -= 1;
     if (input.isDown('KeyS') || input.isDown('ArrowDown')) mz += 1;
     if (input.isDown('KeyA') || input.isDown('ArrowLeft')) mx -= 1;
     if (input.isDown('KeyD') || input.isDown('ArrowRight')) mx += 1;
@@ -604,7 +612,7 @@ export class Player {
       }
     }
     if (this.swimming && horiz > 0 && Math.random() < dt * 2) game.audio.play('splash', 0.3);
-    if (this.swimming && this.torchLit && ITEMS[this.equipped.shield].lightStyle !== 'lantern') { this.toggleTorch(true); game.audio.play('douse', 0.9); game.ui.notify('Your torch hisses out in the water.'); }
+    if (this.swimming && this.torchLit && !waterproofLight(ITEMS[this.equipped.shield])) { this.toggleTorch(true); game.audio.play('douse', 0.9); game.ui.notify('Your torch hisses out in the water.'); }
     // a one-time nudge the first time it gets properly dark
     if (!this._torchHint && !this.torchLit && this.lightLevel() < 0.5 && this.inventory.has('torch')) {
       this._torchHint = true;

@@ -86,6 +86,8 @@ export function meleeStrike(attacker, power = false) {
   applyHit(target, { amount, attacker, kind: 'melee', power, element: attacker.def?.element });
   const w = attacker.isPlayer ? attacker.equippedWeapon() : null;
   if (w?.elementDamage && !target.dead) elementalStrike(attacker, target, w, power);
+  // Purrsuit: now and then the foe takes fright and runs
+  if (w?.startle && !target.dead && !target.isPlayer && Math.random() < w.startle) { target.fleeFrom = attacker; target.fleeT = 3; game.ui.notify(`${target.name} is startled!`); }
   return target;
 }
 

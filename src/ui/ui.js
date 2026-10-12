@@ -321,6 +321,9 @@ export class UI {
       if (wantCell === 'oblivion') return LOCATIONS.gate;
       return tgt.world || null;
     }
+    // a door from here into the target's cell (the cove's interiors; the jolly boat out to the Meringue)
+    const into = cell.interactables.find((x) => (x.kind === 'door' && x.cell === wantCell && !x.exit) || (x.kind === 'jollyboat' && wantCell === 'meringue'));
+    if (into) return into.pos;
     // inside another cell: point to its exit
     const exit = cell.interactables.find((x) => x.kind === 'door' && x.exit) || cell.interactables.find((x) => x.kind === 'returnportal');
     return exit ? exit.pos : null;

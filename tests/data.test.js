@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Inventory, ITEMS, LOOT, rollLoot, parseSpec, FLOWERS } from '../src/data/items.js';
 import { SPELLS, SPELL_SHOP, SPELL_PRICES } from '../src/data/spells.js';
 import { TEMPLATES, LEVELED, PEOPLE, NPCS, pickLeveled } from '../src/data/actors.js';
-import { DIALOGUE, MERCHANTS } from '../src/data/dialogue.js';
+import { DIALOGUE, MERCHANTS, INSULTS } from '../src/data/dialogue.js';
 import { QUESTS, QuestLog } from '../src/data/quests.js';
 import { BIRTHSIGNS, CLASSES, SKILLS } from '../src/data/stats.js';
 import { mulberry32 } from '../src/core/noise.js';
@@ -65,6 +65,20 @@ describe('data integrity', () => {
     expect(DIALOGUE.hob.topics.map((t) => t.id)).toEqual(expect.arrayContaining(['puppies', 'flowers']));
     for (const t of ['dog', 'mother_dog', 'puppy']) expect(TEMPLATES[t].pettable, t).toBe(true);
     expect(TEMPLATES.dog.faction).toBe('ally');
+  });
+  it('the Admiral questline is complete and its pieces exist', () => {
+    for (const q of ['sq_cat1', 'sq_cat2', 'sq_cat3', 'sq_cat4', 'sq_cat5']) expect(Object.values(QUESTS[q].stages).some((st) => st.done), q).toBe(true);
+    for (const id of ['lost_cat_poster', 'smoked_herring', 'crumpet_collar', 'herring_articles', 'proper_hook', 'golden_sardine', 'brisk_note', 'brisk_key', 'ghost_lantern', 'purrsuit', 'brisk_tricorn', 'brisk_compass', 'catspaw_bandana', 'tiny_jumper']) expect(ITEMS[id], id).toBeTruthy();
+    expect(ITEMS.ghost_lantern.lightStyle).toBe('ghost');
+    for (const id of ['gallowglass', 'gallowglass_pier', 'odette', 'grumm', 'grumm_inn', 'jzhirr', 'jzhirr_inn', 'fennick', 'brisk']) expect(DIALOGUE[NPCS.find((n) => n.id === id)?.dialogue], id).toBeTruthy();
+    for (const t of ['admiral', 'kitten', 'crumpet']) expect(TEMPLATES[t].essential, t).toBe(true);
+    expect(TEMPLATES.drowned_bosun.extraLoot).toContain('brisk_key');
+    // every insult can be answered: each retort is taught by someone, or by the Captain's armchair
+    expect(INSULTS).toHaveLength(5);
+    for (const x of INSULTS) expect(['odette', 'jzhirr', 'lap']).toContain(x.from);
+  });
+  it('pets can never die', () => {
+    for (const t of ['dog', 'kitten']) expect(TEMPLATES[t].essential, t).toBe(true);
   });
   it('the White Hare questline is complete and its pieces exist', () => {
     for (let i = 1; i <= 5; i++) expect(Object.values(QUESTS['sq_hare' + i].stages).some((st) => st.done), 'sq_hare' + i).toBe(true);
