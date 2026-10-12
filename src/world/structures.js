@@ -528,6 +528,118 @@ export function portalMaterial(colorA = 0xff6010, colorB = 0x400000) {
   });
 }
 
+/**
+ * The Oblivion Gate: two great claws of black volcanic rock curving up out of a cracked, lava-veined dais and
+ * all but meeting overhead, and between them a swirling door of fire. `fade` holds every material, so the
+ * whole thing can fade in out of the ash as you come within fifty metres of it (see game.updateGateVisibility).
+ */
+function oblivionGate() {
+  const gate = new THREE.Group();
+  const fade = [];
+  const own = (m) => { const c = m.clone(); c.transparent = true; c.userData.baseOpacity = c.opacity ?? 1; fade.push(c); return c; };
+  const rock = own(M('obrock'));
+  rock.flatShading = true;
+  const lava = own(M('lava'));
+  const vein = own(new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 0.55, 0.12) }));
+  const ember = own(new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.35, 0.08) }));
+  const rnd = (() => { let s = 4242; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+  // a rough, flat-shaded lump: a displaced low-poly shape
+  const lumpy = (geo, amt) => {
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + (rnd() - 0.5) * amt, p.getY(i) + (rnd() - 0.5) * amt * 0.6, p.getZ(i) + (rnd() - 0.5) * amt);
+    geo.computeVertexNormals();
+    return geo;
+  };
+  // ---- the dais: three cracked plates of black rock, stepping up to the door
+  for (const [r0, r1, h, y] of [[13, 14.5, 1.0, -0.4], [10.5, 11.5, 0.9, 0.4], [7.5, 8.4, 0.8, 1.15]]) {
+    const plate = new THREE.Mesh(lumpy(new THREE.CylinderGeometry(r0, r1, h, 16, 1), 0.5), rock);
+    plate.position.y = y;
+    plate.receiveShadow = true; plate.castShadow = true;
+    gate.add(plate);
+  }
+  // lava running in the cracks of the dais, and two pools before it
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rnd() * 0.4;
+    const len = 3 + rnd() * 5, r = 4 + rnd() * 6;
+    const crack = new THREE.Mesh(new THREE.BoxGeometry(0.22 + rnd() * 0.2, 0.06, len), lava);
+    crack.position.set(Math.sin(a) * r, 0.62 + (r < 7.5 ? 0.95 : 0.1), Math.cos(a) * r);
+    crack.rotation.y = a + (rnd() - 0.5) * 0.6;
+    gate.add(crack);
+  }
+  for (const s of [-1, 1]) {
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(1.8 + rnd(), 12), lava);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(s * 6.5, 0.12, 10.5);
+    gate.add(pool);
+  }
+  // ---- the claws: tapering, gnarled horns that sweep up and in, with spines down their backs and lava in their seams
+  const taper = (curve, r0, r1, n = 48, radial = 9) => {
+    const geo = new THREE.TubeGeometry(curve, n, 1, radial, false);
+    const p = geo.attributes.position;
+    const pt = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      const ring = Math.floor(i / (radial + 1));
+      const t = ring / n;
+      curve.getPointAt(t, pt);
+      const r = (r0 + (r1 - r0) * Math.pow(t, 0.8)) * (0.9 + rnd() * 0.22);
+      p.setXYZ(i, pt.x + (p.getX(i) - pt.x) * r, pt.y + (p.getY(i) - pt.y) * r, pt.z + (p.getZ(i) - pt.z) * r);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  for (const s of [-1, 1]) {
+    const claw = new THREE.CatmullRomCurve3([V(s * 7.2, 1, 0.4), V(s * 8.6, 6, 0.9), V(s * 8.2, 11.5, 0.5), V(s * 5.8, 16.4, -0.2), V(s * 2.2, 19.6, -0.7), V(s * 0.5, 20.4, -0.9)]);
+    const horn = new THREE.Mesh(taper(claw, 2.1, 0.22), rock);
+    horn.castShadow = true;
+    gate.add(horn);
+    // a slimmer inner rib, framing the door
+    const rib = new THREE.CatmullRomCurve3([V(s * 5.4, 1.4, 1.2), V(s * 6.3, 7, 1.5), V(s * 5.6, 12.5, 1.1), V(s * 3.4, 16.2, 0.6), V(s * 1.0, 17.6, 0.4)]);
+    const ribM = new THREE.Mesh(taper(rib, 0.85, 0.16, 36, 7), rock);
+    ribM.castShadow = true;
+    gate.add(ribM);
+    // glowing seams of lava down the front of each claw
+    const seam = new THREE.CatmullRomCurve3(claw.getPoints(24).map((q, i) => q.clone().add(V(-s * 0.15, 0, 1.3 - i * 0.035))));
+    gate.add(new THREE.Mesh(taper(seam, 0.14, 0.04, 40, 5), vein));
+    // spines down the outside of the claw, their tips smouldering
+    for (let k = 0; k < 9; k++) {
+      const t = 0.08 + k * 0.1;
+      const q = claw.getPointAt(t), tan = claw.getTangentAt(t);
+      const out = V(s, 0.35, 0).normalize();
+      const len = 1.4 + (1 - t) * 1.6;
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.32 * (1.2 - t), len, 6), rock);
+      sp.position.copy(q).addScaledVector(out, 1.6 * (1.15 - t));
+      sp.quaternion.setFromUnitVectors(V(0, 1, 0), out.clone().add(tan.multiplyScalar(0.3)).normalize());
+      sp.castShadow = true;
+      gate.add(sp);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1 * (1.2 - t), len * 0.28, 5), ember);
+      tip.position.copy(sp.position).addScaledVector(sp.up.clone().applyQuaternion(sp.quaternion), len * 0.4);
+      tip.quaternion.copy(sp.quaternion);
+      gate.add(tip);
+    }
+  }
+  // ---- the door of fire, with a burning rim
+  const portalMat = portalMaterial();
+  portalMat.uniforms.uOpacity = { value: 1 };
+  portalMat.fragmentShader = portalMat.fragmentShader.replace('uniform float uTime;', 'uniform float uTime; uniform float uOpacity;').replace('col += vec3(1.0, 0.7, 0.3) * pow(1.0 - r, 4.0) * 1.5;', 'col += vec3(1.0, 0.55, 0.2) * pow(1.0 - r, 5.0) * 0.45;')
+    // dimmer than the old door, so the swirl of fire reads instead of blooming into a white disc
+    .replace('gl_FragColor = vec4(col * 1.6, alpha);', 'gl_FragColor = vec4(col * 0.85, alpha * uOpacity);');
+  const portal = new THREE.Mesh(new THREE.CircleGeometry(1, 64), portalMat);
+  portal.position.set(0, 9.2, 0.6);
+  portal.scale.set(5.0, 7.6, 1);
+  portal.renderOrder = 3;
+  gate.add(portal);
+  const back = portal.clone();
+  back.rotation.y = Math.PI;
+  back.position.z = 0.55;
+  gate.add(back);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 6, 64), own(new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 0.55, 0.15), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })));
+  rim.position.copy(portal.position).setZ(0.7);
+  rim.scale.set(5.05, 7.65, 1);
+  gate.add(rim);
+  return { gate, portal, back, portalMats: [portalMat, back.material], fade };
+}
+
 // ------------------------------------------------------------------ the world
 /** The ward over the Mages Guild's door: rings of sigils in additive blue light (hidden by game.js once it falls). */
 function guildWard(x, y, z) {
@@ -957,58 +1069,28 @@ export function buildWorldStructures(b, terrain, state) {
     const G = LOCATIONS.gate;
     const h0 = H(G.x, G.z);
     const faceRot = Math.atan2(-360 - G.x, 240 - G.z); // face the siege camp
-    const gate = new THREE.Group();
+    const built = oblivionGate();
+    const gate = built.gate;
     gate.position.set(G.x, h0, G.z);
     gate.rotation.y = faceRot;
+    gate.userData.dynamic = true;
+    gate.traverse((o) => { o.userData.dynamic = true; });
     b.add(gate);
-    const rockM = M('obrock');
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(10, 12, 1.4, 10), rockM);
-    base.position.y = -0.2;
-    base.receiveShadow = true;
-    gate.add(base);
-    for (const s of [-1, 1]) {
-      // curved horn built from tapered segments
-      let px = s * 7, py = 0, ang = 0;
-      for (let k = 0; k < 9 && Math.abs(px) > 1.1; k++) {
-        const len = 2.6;
-        const r0 = 1.5 - k * 0.13, r1 = r0 - 0.13;
-        const seg = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.15, r1), Math.max(0.2, r0), len, 7), rockM);
-        const nx = px - Math.sin(ang) * len * s, ny = py + Math.cos(ang) * len;
-        seg.position.set((px + nx) / 2, (py + ny) / 2, 0);
-        seg.rotation.z = ang * s;
-        seg.castShadow = true;
-        gate.add(seg);
-        // spikes
-        if (k % 2 === 0) {
-          const sp = new THREE.Mesh(new THREE.ConeGeometry(0.25, 1.6, 5), rockM);
-          sp.position.set(nx + s * 0.8, ny, 0);
-          sp.rotation.z = -s * 1.2;
-          gate.add(sp);
-        }
-        px = nx; py = ny;
-        ang += 0.19;
-      }
-    }
-    const portal = new THREE.Mesh(new THREE.CircleGeometry(6.2, 48), portalMaterial());
-    portal.position.set(0, 7.8, 0);
-    portal.scale.set(0.95, 1.25, 1);
-    portal.renderOrder = 3;
-    gate.add(portal);
-    const portalBack = portal.clone();
-    portalBack.rotation.y = PI;
-    gate.add(portalBack);
+    const portal = built.portal, portalBack = built.back;
     b.col.addCircle(G.x, G.z, 10, h0 - 2, h0 + 0.5, { walkable: true });
     b.col.addBox(G.x, G.z, 9, 1.2, faceRot, h0 - 1, h0 + 16);
     for (const s of [-1, 1]) {
       const c = Math.cos(faceRot), sn = Math.sin(faceRot);
       b.col.addCircle(G.x + s * 7 * c, G.z - s * 7 * sn, 1.6, h0 - 1, h0 + 18);
     }
-    state.gate = { group: gate, portal, portalMats: [portal.material, portalBack.material] };
+    state.gate = { group: gate, portal, portalMats: built.portalMats, fade: built.fade, x: G.x, z: G.z };
     const front = new THREE.Vector3(Math.sin(faceRot), 0, Math.cos(faceRot));
     const ip = new THREE.Vector3(G.x, h0 + 2.6, G.z).addScaledVector(front, 1.6);
     state.gateInteract = b.interact({ kind: 'gate', id: 'kvatch_gate', name: 'Oblivion Gate', pos: ip, radius: 3.2, verb: 'Enter' });
     state.gateLight = b.light(0xff4010, 60, 40, G.x, h0 + 8, G.z, { flicker: true });
     state.gateEmitter = b.emitter('ember', G.x, h0 + 1, G.z, 14);
+    // smoke climbing off the claws, and embers spilling out of the door (both only near: see updateGateVisibility)
+    state.gateSmoke = [b.emitter('smoke', G.x, h0 + 18, G.z, 2.5), b.emitter('ember', G.x + front.x * 2, h0 + 6, G.z + front.z * 2, 10, { spread: 3 })];
     state.gateFront = { x: G.x + front.x * 10, z: G.z + front.z * 10, yaw: faceRot };
 
     // siege camp

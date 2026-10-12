@@ -2564,10 +2564,12 @@ export const game = {
   passTime(hours, sleeping = false) {
     const p = this.player;
     this.time.hours += hours;
-    const k = Math.min(1, hours / 8);
+    // waiting or sleeping an hour or more puts you back on your feet completely; shorter spells of time
+    // (half an hour's fishing) give back a share
+    const k = hours >= 1 ? 1 : Math.min(1, hours / 8);
     p.health = Math.min(p.maxHealth, p.health + p.maxHealth * k);
     p.magicka = Math.min(p.maxMagicka, p.magicka + p.maxMagicka * k);
-    p.fatigue = p.maxFatigue;
+    p.fatigue = Math.min(p.maxFatigue, p.fatigue + p.maxFatigue * Math.max(k, hours >= 0.5 ? 1 : 0));
     p.effects.shieldT = Math.max(0, p.effects.shieldT - hours * 120);
     if (sleeping && canLevelUp(p.ch)) {
       this.ui.openLevelUp();
@@ -2763,9 +2765,11 @@ export const game = {
     if (c.hasSky) {
       let tint = c.skyTint || 0;
       if (c.id === 'world' && !this.flags.gateClosed) {
+        // the burning sky only comes over you once the Gate itself is in sight
         const G = LOCATIONS.gate;
-        tint = smoothstep(260, 70, Math.hypot(pp.x - G.x, pp.z - G.z)) * 0.85;
+        tint = smoothstep(70, 30, Math.hypot(pp.x - G.x, pp.z - G.z)) * 0.85;
       }
+      if (c.id === 'world') this.updateGateVisibility(dt);
       const hours = c.id === 'oblivion' ? 12.5 : this.time.hours;
       this.sky.update(hours, this.camera.position, this.clockT, tint, wx.overcast);
       const s = this.sky;
@@ -2875,6 +2879,27 @@ export const game = {
       this.grade.uniforms.uTint.value.setRGB(1 - 0.25 * dark * ne, 1, 1 - 0.1 * dark * ne);
     } else this.grade.uniforms.uTint.value.setRGB(1, 1, 1);
     this.updateLights(dt);
+  },
+
+  /**
+   * The Oblivion Gate can't be seen from across the map: it fades up out of the ash only within 50 m, and its
+   * light, smoke and embers come with it.
+   */
+  updateGateVisibility(dt) {
+    const st = this.cells.world?.state, g = st?.gate;
+    if (!g?.fade) return;
+    const closed = !!this.flags.gateClosed;
+    const pp = this.player.pos;
+    const d = Math.hypot(pp.x - g.x, pp.z - g.z);
+    const want = closed ? 0 : smoothstep(52, 42, d);
+    this._gateVis = (this._gateVis ?? want) + (want - (this._gateVis ?? want)) * Math.min(1, dt * 2.5);
+    const v = this._gateVis;
+    g.group.visible = v > 0.01;
+    for (const m of g.fade) m.opacity = (m.userData.baseOpacity ?? 1) * v;
+    for (const m of g.portalMats) if (m.uniforms?.uOpacity) m.uniforms.uOpacity.value = v;
+    if (st.gateLight) st.gateLight.on = !closed && v > 0.2;
+    if (st.gateEmitter) st.gateEmitter.rate = closed ? 0 : 14 * v;
+    for (const e of st.gateSmoke || []) e.rate = closed ? 0 : (e.kind === 'smoke' ? 2.5 : 10) * v;
   },
 
   /** Each pooled light costs every lit pixel, so the overworld uses fewer than interiors. */
